@@ -1,0 +1,6 @@
+@LDPortal.API_HostAddress = http://localhost:5155
+
+GET {{LDPortal.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
