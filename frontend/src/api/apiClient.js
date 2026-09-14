@@ -103,3 +103,9 @@ export const mediaApi = {
     });
   },
 };
+
+// ── Notifications API ────────────────────────────────────────────────────────
+export const notificationsApi = {
+  getAll: () => apiClient.get('/notifications'),
+  markAsRead: (id) => apiClient.post(`/notifications/${id}/read`, {}),
+};

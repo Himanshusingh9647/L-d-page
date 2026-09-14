@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import MainLayout from './components/layout/MainLayout';
 import Login from './pages/auth/Login';
 
@@ -16,31 +17,33 @@ import AdminModules from './pages/admin/AdminModules';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+    <ToastProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          {/* Employee Routes */}
-          <Route element={<MainLayout requiredRole="Employee" />}>
-            <Route path="/" element={<EmployeeDashboard />} />
-            <Route path="/training/:moduleId" element={<TrainingViewer />} />
-          </Route>
+            {/* Employee Routes */}
+            <Route element={<MainLayout requiredRole="Employee" />}>
+              <Route path="/" element={<EmployeeDashboard />} />
+              <Route path="/training/:moduleId" element={<TrainingViewer />} />
+            </Route>
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<MainLayout requiredRole="Admin" />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="modules" element={<AdminModules />} />
-            <Route path="employees" element={<EmployeesList />} />
-            <Route path="assignments" element={<AssignmentsMatrix />} />
-            <Route path="recurring" element={<RecurringConfig />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<MainLayout requiredRole="Admin" />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="modules" element={<AdminModules />} />
+              <Route path="employees" element={<EmployeesList />} />
+              <Route path="assignments" element={<AssignmentsMatrix />} />
+              <Route path="recurring" element={<RecurringConfig />} />
+            </Route>
 
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

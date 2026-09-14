@@ -55,7 +55,7 @@ export default function MainLayout({ requiredRole }) {
           <NotificationsDropdown />
         </header>
         
-        <main className="flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300 p-8">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300">
           <Outlet />
         </main>
       </div>

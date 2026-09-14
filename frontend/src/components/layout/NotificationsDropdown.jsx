@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { Bell, Check, Circle, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { notificationsApi } from '../../api/apiClient';
 
-const API_URL = 'http://localhost:5155/api';
-
+// API client handles Auth token and baseURL
 export default function NotificationsDropdown({ collapsed }) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -21,9 +20,7 @@ export default function NotificationsDropdown({ collapsed }) {
         return;
       }
 
-      const res = await axios.get(`${API_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await notificationsApi.getAll();
       
       setNotifications(res.data);
       setUnreadCount(res.data.filter(n => !n.isRead).length);
@@ -55,10 +52,7 @@ export default function NotificationsDropdown({ collapsed }) {
   const handleMarkRead = async (id, e) => {
     e.stopPropagation();
     try {
-      const token = localStorage.getItem('ld_token');
-      await axios.post(`${API_URL}/notifications/${id}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await notificationsApi.markAsRead(id);
       
       setNotifications(prev => prev.map(n => 
         n.notificationId === id ? { ...n, isRead: true } : n

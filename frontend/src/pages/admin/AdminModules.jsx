@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Play, FileText, Loader2, RefreshCw, Trash2, Edit2, UploadCloud, CheckCircle } from "lucide-react";
 import { modulesApi, mediaApi } from "../../api/apiClient";
+import { useToast } from "../../context/ToastContext";
 
 export default function AdminModules() {
   const [modules, setModules] = useState([]);
@@ -12,8 +13,7 @@ export default function AdminModules() {
   // Upload State
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState("");
-  const [uploadSuccess, setUploadSuccess] = useState("");
+  const toast = useToast();
   const fileInputRef = useRef(null);
   
   const [editingModuleId, setEditingModuleId] = useState(null);
@@ -71,14 +71,12 @@ export default function AdminModules() {
   const uploadFile = async (file) => {
     setUploading(true);
     setUploadProgress(0);
-    setUploadError("");
-    setUploadSuccess("");
 
     try {
       const res = await mediaApi.upload(file, (percent) => {
         setUploadProgress(percent);
       });
-      setUploadSuccess(`Successfully uploaded ${res.data.data.fileName}`);
+      toast.success(`Successfully uploaded ${res.data.data.fileName}`);
       await refreshMedia();
       
       // Auto-select the uploaded file if we are editing an item
@@ -87,7 +85,7 @@ export default function AdminModules() {
       }
     } catch (error) {
       console.error("Upload failed", error);
-      setUploadError(error.response?.data?.message || "Upload failed. Max size is 500MB.");
+      toast.error(error.response?.data?.message || "Upload failed. Max size is 500MB.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
@@ -115,15 +113,11 @@ export default function AdminModules() {
   const openCreateModal = () => {
     setEditingModuleId(null);
     setNewModule(initialModuleState);
-    setUploadError("");
-    setUploadSuccess("");
     setIsModalOpen(true);
   };
 
   const openEditModal = async (module) => {
     setEditingModuleId(module.moduleId);
-    setUploadError("");
-    setUploadSuccess("");
     
     const items = module.items && module.items.length > 0 ? module.items.map(item => ({
       title: item.title,
@@ -164,8 +158,10 @@ export default function AdminModules() {
 
       if (editingModuleId) {
         await modulesApi.update(editingModuleId, payload);
+        toast.success("Module updated successfully!");
       } else {
         await modulesApi.create(payload);
+        toast.success("Module created successfully!");
       }
 
       setIsModalOpen(false);
@@ -174,7 +170,7 @@ export default function AdminModules() {
       fetchData();
     } catch (error) {
       console.error("Failed to save module", error);
-      alert("Failed to save module. See console for details.");
+      toast.error(error.response?.data?.message || "Failed to save module");
     } finally {
       setSubmitting(false);
     }
@@ -190,7 +186,7 @@ export default function AdminModules() {
 
   return (
     <div className="p-8">
-      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex justify-between items-center bg-white shadow-sm">
+      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex justify-between items-center bg-white sticky top-0 z-30 shadow-sm border-b border-slate-100">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Module Management</h1>
           <p className="text-sm text-slate-500 mt-1">Manage training modules and video assets.</p>
@@ -314,17 +310,6 @@ export default function AdminModules() {
                     )}
                   </label>
 
-                  {uploadSuccess && (
-                    <div className="mt-3 p-3 bg-emerald-50 text-emerald-700 text-sm rounded-lg flex items-center border border-emerald-100">
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      {uploadSuccess}
-                    </div>
-                  )}
-                  {uploadError && (
-                    <div className="mt-3 p-3 bg-rose-50 text-rose-700 text-sm rounded-lg border border-rose-100">
-                      {uploadError}
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-5">

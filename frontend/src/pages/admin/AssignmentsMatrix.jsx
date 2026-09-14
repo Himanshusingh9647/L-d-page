@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { assignmentsApi } from '../../api/apiClient';
 import { Save, Loader2, CheckSquare, Square, XCircle } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
 
 export default function AssignmentsMatrix() {
   const [data, setData] = useState({ employees: [], modules: [], assignments: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changes, setChanges] = useState({});
-  const [message, setMessage] = useState(null);
+  const [globalDueDate, setGlobalDueDate] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     loadMatrix();
@@ -49,7 +51,6 @@ export default function AssignmentsMatrix() {
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage(null);
     try {
       let addCount = 0;
       let removeCount = 0;
@@ -64,7 +65,8 @@ export default function AssignmentsMatrix() {
            await assignmentsApi.create({
              userIds: [parseInt(userId)],
              moduleIds: [parseInt(moduleId)],
-             isRequired: true
+             isRequired: true,
+             dueDate: globalDueDate ? globalDueDate : null
            });
            addCount++;
         }
@@ -82,11 +84,11 @@ export default function AssignmentsMatrix() {
         }
       }
 
-      setMessage({ type: 'success', text: `Saved successfully: ${addCount} assigned, ${removeCount} removed.` });
+      toast.success(`Saved successfully: ${addCount} assigned, ${removeCount} removed.`);
       await loadMatrix(); 
     } catch (error) {
       console.error('Failed to save assignments:', error);
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to save assignments.' });
+      toast.error(error.response?.data?.message || 'Failed to save assignments.');
     } finally {
       setSaving(false);
     }
@@ -94,7 +96,6 @@ export default function AssignmentsMatrix() {
 
   const discardChanges = () => {
     setChanges({});
-    setMessage(null);
   };
 
   const hasChanges = Object.keys(changes).length > 0;
@@ -103,7 +104,7 @@ export default function AssignmentsMatrix() {
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto">
-      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/80 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-20 shadow-sm">
+      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Training Assignment Matrix</h1>
           <p className="text-sm text-slate-500 mt-1">Select which training modules each employee needs to complete.</p>
@@ -115,6 +116,15 @@ export default function AssignmentsMatrix() {
               <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
               Unsaved changes
             </span>
+            <div className="flex items-center gap-2 mr-2 border-r border-indigo-200/50 pr-4">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Due Date:</label>
+              <input 
+                type="date" 
+                value={globalDueDate}
+                onChange={(e) => setGlobalDueDate(e.target.value)}
+                className="text-sm bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
             <button onClick={discardChanges} className="text-slate-500 hover:text-slate-700 font-semibold text-sm px-3 py-1.5 rounded-lg hover:bg-white transition-colors">
               Discard
             </button>
@@ -129,13 +139,6 @@ export default function AssignmentsMatrix() {
           </div>
         )}
       </div>
-
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 font-medium text-sm border shadow-sm ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
-          {message.type === 'error' ? <XCircle size={18} /> : <CheckSquare size={18} />}
-          {message.text}
-        </div>
-      )}
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden overflow-x-auto relative z-10">
         <table className="w-full text-left border-collapse">

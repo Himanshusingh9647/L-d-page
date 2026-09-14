@@ -50,7 +50,7 @@ export default function EmployeesList() {
 
   return (
     <div className="p-8">
-      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border-b border-slate-100 shadow-sm">
+      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Employee Directory</h1>
           <p className="text-sm text-slate-500 mt-1">Compliance overview and individual training records.</p>
