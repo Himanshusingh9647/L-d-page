@@ -36,6 +36,9 @@ apiClient.interceptors.response.use(
 
 export default apiClient;
 
+// Helper to get the media base URL for constructing full URLs
+export const getMediaBaseUrl = () => API_BASE_URL;
+
 // ── Auth API ─────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (email, password) =>
@@ -86,4 +89,17 @@ export const recurringApi = {
 // ── Media API ────────────────────────────────────────────────────────────────
 export const mediaApi = {
   getAvailableFiles: () => apiClient.get('/media/available-files'),
+  upload: (file, onProgress) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      },
+    });
+  },
 };

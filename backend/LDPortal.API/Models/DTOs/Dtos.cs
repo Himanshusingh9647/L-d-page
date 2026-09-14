@@ -51,7 +51,7 @@ public class ModuleDto
     public string? Description { get; set; }
     public string? Duration { get; set; }
     public int? DurationSeconds { get; set; }
-    public string? ContentUrl { get; set; } // Deprecated, kept for backwards compatibility
+    public string? ContentUrl { get; set; }
     public string? PosterUrl { get; set; }
     public string? PolicyContent { get; set; }
     public bool IsActive { get; set; }
@@ -78,7 +78,7 @@ public class CreateModuleRequest
     public string? Description { get; set; }
     public string? Duration { get; set; }
     public int? DurationSeconds { get; set; }
-    public string? ContentUrl { get; set; } // Deprecated
+    public string? ContentUrl { get; set; }
     public string? PosterUrl { get; set; }
     public string? PolicyContent { get; set; }
     public List<CreateModuleItemRequest> Items { get; set; } = new();
@@ -92,7 +92,7 @@ public class UpdateModuleRequest
     public string? Description { get; set; }
     public string? Duration { get; set; }
     public int? DurationSeconds { get; set; }
-    public string? ContentUrl { get; set; } // Deprecated
+    public string? ContentUrl { get; set; }
     public string? PosterUrl { get; set; }
     public string? PolicyContent { get; set; }
     public bool IsActive { get; set; } = true;
@@ -164,6 +164,7 @@ public class ProgressDto
     public int? RecurrenceIntervalDays { get; set; }
     public List<int> CompletedItemIds { get; set; } = new();
     public List<ItemProgressDto> ItemProgresses { get; set; } = new();
+    public List<ModuleItemDto> Items { get; set; } = new();
 }
 
 public class ItemProgressDto
@@ -296,6 +297,16 @@ public class UpdateRecurringConfigRequest
     public int RecurrenceIntervalDays { get; set; }
 
     public bool IsActive { get; set; }
+}
+
+// ── Media Upload DTOs ───────────────────────────────────────────────────────
+
+public class MediaUploadResult
+{
+    public string FileName { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+    public long SizeBytes { get; set; }
+    public string ContentType { get; set; } = string.Empty;
 }
 
 // ── Common Response DTOs ────────────────────────────────────────────────────

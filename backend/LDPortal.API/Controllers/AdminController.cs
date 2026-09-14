@@ -1,10 +1,10 @@
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using LDPortal.API.Data;
 using LDPortal.API.Models.DTOs;
-using LDPortal.API.Models.Entities;
-using LDPortal.API.Services;
 
 namespace LDPortal.API.Controllers;
 
@@ -26,65 +26,28 @@ public class AdminController : ControllerBase
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {
-        var employees = await _context.Users
-            .Where(u => u.Role == "Employee" && u.IsActive)
-            .ToListAsync();
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetAdminOverview";
+        command.CommandType = CommandType.StoredProcedure;
 
-        var totalEmployees = employees.Count;
-        var now = DateTime.UtcNow;
-
-        // Get all required assignments with progress
-        var requiredAssignments = await (
-            from ta in _context.TrainingAssignments
-            join u in _context.Users on ta.UserId equals u.UserId
-            join tp in _context.TrainingProgress
-                on new { ta.UserId, ta.ModuleId } equals new { tp.UserId, tp.ModuleId } into tpGroup
-            from tp in tpGroup.DefaultIfEmpty()
-            where ta.IsActive && ta.IsRequired && u.IsActive && u.Role == "Employee"
-            select new
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            var dto = new AdminDashboardDto
             {
-                ta.UserId,
-                ta.ModuleId,
-                ta.DueDate,
-                Status = tp != null ? tp.Status : "NotStarted",
-                CompletedAt = tp != null ? tp.CompletedAt : (DateTime?)null
-            }
-        ).ToListAsync();
+                TotalEmployees = reader.GetInt32(reader.GetOrdinal("TotalEmployees")),
+                CompliantEmployees = reader.GetInt32(reader.GetOrdinal("CompliantEmployees")),
+                ComplianceRate = reader.GetInt32(reader.GetOrdinal("ComplianceRate")),
+                PendingTrainings = reader.GetInt32(reader.GetOrdinal("PendingTrainings")),
+                OverdueTrainings = reader.GetInt32(reader.GetOrdinal("OverdueTrainings")),
+                CompletedToday = reader.GetInt32(reader.GetOrdinal("CompletedToday"))
+            };
+            return Ok(ApiResponse<AdminDashboardDto>.Ok(dto));
+        }
 
-        // Compliant employees — all required assignments completed
-        var compliantEmployees = employees.Count(emp =>
-        {
-            var empAssignments = requiredAssignments.Where(a => a.UserId == emp.UserId);
-            return empAssignments.Any() && empAssignments.All(a => a.Status == "Completed");
-        });
-
-        // Pending required trainings
-        var pendingTrainings = requiredAssignments.Count(a => a.Status != "Completed");
-
-        // Overdue trainings
-        var overdueTrainings = requiredAssignments.Count(a =>
-            a.Status != "Completed" && a.DueDate.HasValue && a.DueDate.Value < now);
-
-        // Completed today
-        var completedToday = requiredAssignments.Count(a =>
-            a.Status == "Completed" && a.CompletedAt.HasValue &&
-            a.CompletedAt.Value.Date == now.Date);
-
-        var complianceRate = totalEmployees > 0
-            ? (compliantEmployees * 100) / totalEmployees
-            : 0;
-
-        var dto = new AdminDashboardDto
-        {
-            TotalEmployees = totalEmployees,
-            CompliantEmployees = compliantEmployees,
-            ComplianceRate = complianceRate,
-            PendingTrainings = pendingTrainings,
-            OverdueTrainings = overdueTrainings,
-            CompletedToday = completedToday
-        };
-
-        return Ok(ApiResponse<AdminDashboardDto>.Ok(dto));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     /// <summary>
@@ -93,70 +56,34 @@ public class AdminController : ControllerBase
     [HttpGet("employees")]
     public async Task<IActionResult> GetEmployees([FromQuery] string? search = null)
     {
-        var employeesQuery = _context.Users
-            .Where(u => u.Role == "Employee" && u.IsActive);
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetEmployees";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@Search", (object?)search ?? DBNull.Value));
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var searchLower = search.ToLower();
-            employeesQuery = employeesQuery.Where(u =>
-                u.FullName.ToLower().Contains(searchLower) ||
-                u.Department.ToLower().Contains(searchLower) ||
-                u.EmployeeCode.ToLower().Contains(searchLower));
-        }
-
-        var employees = await employeesQuery.OrderBy(u => u.FullName).ToListAsync();
-
-        var now = DateTime.UtcNow;
+        using var reader = await command.ExecuteReaderAsync();
         var result = new List<EmployeeOverviewDto>();
 
-        foreach (var emp in employees)
+        while (await reader.ReadAsync())
         {
-            var assignments = await (
-                from ta in _context.TrainingAssignments
-                join tm in _context.TrainingModules on ta.ModuleId equals tm.ModuleId
-                join tp in _context.TrainingProgress
-                    on new { ta.UserId, ta.ModuleId } equals new { tp.UserId, tp.ModuleId } into tpGroup
-                from tp in tpGroup.DefaultIfEmpty()
-                where ta.UserId == emp.UserId && ta.IsActive && tm.IsActive
-                select new
-                {
-                    ta.IsRequired,
-                    tm.Type,
-                    ta.DueDate,
-                    Status = tp != null ? tp.Status : "NotStarted"
-                }
-            ).ToListAsync();
-
-            var totalAssigned = assignments.Count;
-            var completed = assignments.Count(a => a.Status == "Completed");
-            var pending = assignments.Count(a => a.Status != "Completed");
-            var overdue = assignments.Count(a => a.Status != "Completed" && a.DueDate.HasValue && a.DueDate.Value < now);
-
-            var videosCompleted = assignments.Count(a => a.Type == "Video" && a.Status == "Completed");
-            var totalVideos = assignments.Count(a => a.Type == "Video");
-            var pdfsCompleted = assignments.Count(a => a.Type == "PDF" && a.Status == "Completed");
-            var totalPdfs = assignments.Count(a => a.Type == "PDF");
-
-            var requiredAssignments = assignments.Where(a => a.IsRequired);
-            var isCompliant = requiredAssignments.Any() && requiredAssignments.All(a => a.Status == "Completed");
-
             result.Add(new EmployeeOverviewDto
             {
-                UserId = emp.UserId,
-                EmployeeCode = emp.EmployeeCode,
-                FullName = emp.FullName,
-                Department = emp.Department,
-                Initials = emp.Initials,
-                TotalAssigned = totalAssigned,
-                Completed = completed,
-                Pending = pending,
-                Overdue = overdue,
-                VideosCompleted = videosCompleted,
-                TotalVideos = totalVideos,
-                PdfsCompleted = pdfsCompleted,
-                TotalPdfs = totalPdfs,
-                IsCompliant = isCompliant
+                UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                EmployeeCode = reader.GetString(reader.GetOrdinal("EmployeeCode")),
+                FullName = reader.GetString(reader.GetOrdinal("FullName")),
+                Department = reader.GetString(reader.GetOrdinal("Department")),
+                Initials = reader.GetString(reader.GetOrdinal("Initials")),
+                TotalAssigned = reader.GetInt32(reader.GetOrdinal("TotalAssigned")),
+                Completed = reader.GetInt32(reader.GetOrdinal("Completed")),
+                Pending = reader.GetInt32(reader.GetOrdinal("Pending")),
+                Overdue = reader.GetInt32(reader.GetOrdinal("Overdue")),
+                VideosCompleted = reader.GetInt32(reader.GetOrdinal("VideosCompleted")),
+                TotalVideos = reader.GetInt32(reader.GetOrdinal("TotalVideos")),
+                PdfsCompleted = reader.GetInt32(reader.GetOrdinal("PdfsCompleted")),
+                TotalPdfs = reader.GetInt32(reader.GetOrdinal("TotalPdfs")),
+                IsCompliant = reader.GetBoolean(reader.GetOrdinal("IsCompliant"))
             });
         }
 
@@ -169,62 +96,84 @@ public class AdminController : ControllerBase
     [HttpGet("employee/{userId}")]
     public async Task<IActionResult> GetEmployeeDetail(int userId)
     {
-        var employee = await _context.Users.FindAsync(userId);
-        if (employee == null || !employee.IsActive)
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetEmployeeDetail";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", userId));
+
+        using var reader = await command.ExecuteReaderAsync();
+        
+        UserDto? employee = null;
+        if (await reader.ReadAsync())
+        {
+            employee = new UserDto
+            {
+                UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                EmployeeCode = reader.GetString(reader.GetOrdinal("EmployeeCode")),
+                FullName = reader.GetString(reader.GetOrdinal("FullName")),
+                Email = reader.GetString(reader.GetOrdinal("Email")),
+                Department = reader.GetString(reader.GetOrdinal("Department")),
+                Role = reader.GetString(reader.GetOrdinal("Role")),
+                Initials = reader.GetString(reader.GetOrdinal("Initials"))
+            };
+        }
+
+        if (employee == null)
             return NotFound(ApiResponse.Fail("Employee not found."));
 
-        var trainings = await (
-            from ta in _context.TrainingAssignments
-            join tm in _context.TrainingModules on ta.ModuleId equals tm.ModuleId
-            join tp in _context.TrainingProgress
-                on new { ta.UserId, ta.ModuleId } equals new { tp.UserId, tp.ModuleId } into tpGroup
-            from tp in tpGroup.DefaultIfEmpty()
-            where ta.UserId == userId && ta.IsActive && tm.IsActive
-            orderby tp == null || tp.Status != "Completed" ? 0 : 1, ta.DueDate, tm.Title
-            select new ProgressDto
+        var trainings = new List<ProgressDto>();
+        int videosCompleted = 0, totalVideos = 0, pdfsCompleted = 0, totalPdfs = 0;
+        bool isCompliant = true;
+        bool hasRequired = false;
+
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
             {
-                ProgressId = tp != null ? tp.ProgressId : 0,
-                ModuleId = tm.ModuleId,
-                ModuleTitle = tm.Title,
-                ModuleType = tm.Type,
-                ModuleDescription = tm.Description,
-                Duration = tm.Duration,
-                DurationSeconds = tm.DurationSeconds,
-                ContentUrl = tm.ContentUrl,
-                PosterUrl = tm.PosterUrl,
-                IsRequired = ta.IsRequired,
-                DueDate = ta.DueDate,
-                Status = tp != null ? tp.Status : "NotStarted",
-                ResumeTimeSeconds = tp != null ? tp.ResumeTimeSeconds : 0,
-                MaxWatchedSeconds = tp != null ? tp.MaxWatchedSeconds : 0,
-                VideoWatchedPercent = tp != null ? tp.VideoWatchedPercent : 0,
-                CompletedAt = tp != null ? tp.CompletedAt : null,
-                ConsentedAt = tp != null ? tp.ConsentedAt : null,
-                IsRecurring = ta.IsRecurring,
-                RecurrenceIntervalDays = ta.RecurrenceIntervalDays
+                var type = reader.GetString(reader.GetOrdinal("ModuleType"));
+                var status = reader.GetString(reader.GetOrdinal("Status"));
+                var isRequired = reader.GetBoolean(reader.GetOrdinal("IsRequired"));
+                
+                if (type == "Video") { totalVideos++; if (status == "Completed") videosCompleted++; }
+                if (type == "PDF") { totalPdfs++; if (status == "Completed") pdfsCompleted++; }
+                
+                if (isRequired)
+                {
+                    hasRequired = true;
+                    if (status != "Completed") isCompliant = false;
+                }
+
+                trainings.Add(new ProgressDto
+                {
+                    ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                    ModuleTitle = reader.GetString(reader.GetOrdinal("ModuleTitle")),
+                    ModuleType = type,
+                    ModuleDescription = reader.IsDBNull(reader.GetOrdinal("ModuleDescription")) ? null : reader.GetString(reader.GetOrdinal("ModuleDescription")),
+                    Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
+                    DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
+                    ContentUrl = reader.IsDBNull(reader.GetOrdinal("ContentUrl")) ? null : reader.GetString(reader.GetOrdinal("ContentUrl")),
+                    PosterUrl = reader.IsDBNull(reader.GetOrdinal("PosterUrl")) ? null : reader.GetString(reader.GetOrdinal("PosterUrl")),
+                    IsRequired = isRequired,
+                    DueDate = reader.IsDBNull(reader.GetOrdinal("DueDate")) ? null : reader.GetDateTime(reader.GetOrdinal("DueDate")),
+                    Status = status,
+                    ResumeTimeSeconds = reader.GetInt32(reader.GetOrdinal("ResumeTimeSeconds")),
+                    MaxWatchedSeconds = reader.GetInt32(reader.GetOrdinal("MaxWatchedSeconds")),
+                    VideoWatchedPercent = reader.GetDecimal(reader.GetOrdinal("VideoWatchedPercent")),
+                    CompletedAt = reader.IsDBNull(reader.GetOrdinal("CompletedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
+                    ConsentedAt = reader.IsDBNull(reader.GetOrdinal("ConsentedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("ConsentedAt")),
+                    IsRecurring = reader.GetBoolean(reader.GetOrdinal("IsRecurring")),
+                    RecurrenceIntervalDays = reader.IsDBNull(reader.GetOrdinal("RecurrenceIntervalDays")) ? null : reader.GetInt32(reader.GetOrdinal("RecurrenceIntervalDays"))
+                });
             }
-        ).ToListAsync();
+        }
 
-        var videosCompleted = trainings.Count(t => t.ModuleType == "Video" && t.Status == "Completed");
-        var totalVideos = trainings.Count(t => t.ModuleType == "Video");
-        var pdfsCompleted = trainings.Count(t => t.ModuleType == "PDF" && t.Status == "Completed");
-        var totalPdfs = trainings.Count(t => t.ModuleType == "PDF");
-
-        var requiredTrainings = trainings.Where(t => t.IsRequired);
-        var isCompliant = requiredTrainings.Any() && requiredTrainings.All(t => t.Status == "Completed");
+        if (!hasRequired) isCompliant = false;
 
         var detail = new EmployeeDetailDto
         {
-            Employee = new UserDto
-            {
-                UserId = employee.UserId,
-                EmployeeCode = employee.EmployeeCode,
-                FullName = employee.FullName,
-                Email = employee.Email,
-                Department = employee.Department,
-                Role = employee.Role,
-                Initials = employee.Initials
-            },
+            Employee = employee,
             Trainings = trainings,
             VideosCompleted = videosCompleted,
             TotalVideos = totalVideos,
@@ -235,6 +184,4 @@ public class AdminController : ControllerBase
 
         return Ok(ApiResponse<EmployeeDetailDto>.Ok(detail));
     }
-
-
 }

@@ -71,44 +71,47 @@ export default function RecurringConfig() {
     setIsAdding(false);
   };
 
-  if (loading) return <div className="p-8">Loading configurations...</div>;
+  if (loading) return <div className="p-8 flex items-center justify-center text-slate-400 h-64">Loading configurations...</div>;
 
   const availableModules = modules.filter(m => 
     !configs.some(c => c.moduleId === m.moduleId)
   );
 
   return (
-    <div className="p-8">
-      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex justify-between items-center bg-white border-b border-slate-200">
+    <div className="p-8 max-w-5xl mx-auto">
+      <div className="mb-8 flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Recurring Training</h1>
-          <p className="text-slate-500 mt-1">Configure trainings that employees must repeat periodically.</p>
+          <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Recurring Training</h1>
+          <p className="text-slate-500 mt-2 text-sm font-medium">Automate periodic compliance renewals.</p>
         </div>
         
         {!isAdding && !editingId && availableModules.length > 0 && (
-          <button onClick={() => setIsAdding(true)} className="btn-primary">
+          <button onClick={() => setIsAdding(true)} className="btn-primary shadow-md hover:shadow-lg">
             <Plus size={18} />
-            Add Configuration
+            <span>New Config</span>
           </button>
         )}
       </div>
 
       {(isAdding || editingId) && (
-        <div className="card p-6 mb-8 bg-indigo-50/50 border-indigo-100 shadow-inner animate-fade-in">
-          <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
-            <RotateCw size={20} className="text-indigo-600" />
-            {isAdding ? 'New Recurring Configuration' : 'Edit Recurring Configuration'}
+        <div className="bg-white rounded-3xl p-8 mb-10 border border-slate-100 shadow-xl shadow-indigo-100/20 animate-fade-in relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3 tracking-tight">
+            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+              <RotateCw size={20} strokeWidth={2.5} />
+            </div>
+            {isAdding ? 'New Configuration' : 'Edit Configuration'}
           </h3>
           
           <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             {isAdding && (
               <div className="form-group mb-0 md:col-span-2">
-                <label className="form-label">Training Module</label>
+                <label className="form-label text-xs uppercase tracking-widest font-bold">Training Module</label>
                 <select 
                   required
                   value={selectedModule}
                   onChange={e => setSelectedModule(e.target.value)}
-                  className="input-field"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium"
                 >
                   <option value="">Select a module...</option>
                   {availableModules.map(m => (
@@ -118,11 +121,11 @@ export default function RecurringConfig() {
               </div>
             )}
 
-            <div className="form-group mb-0">
-              <label className="form-label">Recurrence Interval (Days)</label>
+            <div className="form-group mb-0 md:col-span-1">
+              <label className="form-label text-xs uppercase tracking-widest font-bold">Interval (Days)</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Calendar className="h-4 w-4 text-slate-400" />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Calendar className="h-5 w-5 text-slate-400" />
                 </div>
                 <input 
                   type="number"
@@ -131,85 +134,88 @@ export default function RecurringConfig() {
                   required
                   value={intervalDays}
                   onChange={e => setIntervalDays(e.target.value)}
-                  className="input-field pl-9"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium text-slate-700"
                 />
               </div>
             </div>
 
             {editingId && (
-              <div className="form-group mb-0 flex items-center h-[42px]">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={e => setIsActive(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium text-slate-700">Active</span>
+              <div className="form-group mb-0 flex items-center h-[50px] md:col-span-1">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center">
+                    <input 
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={e => setIsActive(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </div>
+                  <span className="text-sm font-bold text-slate-600 group-hover:text-slate-800 transition-colors uppercase tracking-wider">Active</span>
                 </label>
               </div>
             )}
 
-            <div className="flex gap-2 pb-0.5 md:col-span-1 justify-end md:justify-start">
-              <button type="submit" className="btn-primary flex-1 md:flex-none">
-                <Save size={16} /> Save
-              </button>
-              <button type="button" onClick={resetForm} className="btn-secondary">
+            <div className="flex gap-3 pb-1 md:col-span-1 justify-end md:justify-end w-full">
+              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-xl font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all">
                 Cancel
+              </button>
+              <button type="submit" className="btn-primary py-2.5 shadow-md">
+                <Save size={18} className="mr-1" /> Save
               </button>
             </div>
           </form>
           
-          <div className="mt-4 flex items-start gap-2 text-sm text-indigo-700 bg-indigo-100/50 p-3 rounded-lg border border-indigo-200/50">
-            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-            <p>
-              When an employee completes a recurring training, it will automatically be reset to "Not Started" after the specified interval, requiring them to complete it again.
+          <div className="mt-6 flex items-start gap-3 text-sm text-indigo-700 bg-indigo-50/80 p-4 rounded-xl border border-indigo-100">
+            <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
+            <p className="leading-relaxed font-medium">
+              When an employee completes a recurring training, their progress automatically resets to "Not Started" after the interval passes, ensuring continuous compliance.
             </p>
           </div>
         </div>
       )}
 
-      <div className="card overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Module</th>
-              <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Interval</th>
-              <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
-              <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+            <tr className="bg-slate-50/80 border-b border-slate-100">
+              <th className="p-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Module</th>
+              <th className="p-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Interval</th>
+              <th className="p-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
+              <th className="p-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-50">
             {configs.length === 0 ? (
               <tr>
-                <td colSpan="4" className="p-8 text-center text-slate-500">
-                  No recurring configurations found.
+                <td colSpan="4" className="p-12 text-center text-slate-400 font-medium">
+                  No recurring configurations active.
                 </td>
               </tr>
             ) : (
               configs.map(config => (
-                <tr key={config.configId} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="p-4">
-                    <div className="font-semibold text-slate-800">{config.moduleTitle}</div>
-                    <div className="text-xs text-slate-500 uppercase mt-0.5">{config.moduleType}</div>
+                <tr key={config.configId} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="p-5">
+                    <div className="font-bold text-slate-800 tracking-tight">{config.moduleTitle}</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 bg-slate-100 inline-block px-2 py-0.5 rounded shadow-sm">{config.moduleType}</div>
                   </td>
-                  <td className="p-4 text-center">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium border border-slate-200">
-                      <Calendar size={14} className="text-slate-500" />
+                  <td className="p-5 text-center">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-sm font-bold border border-slate-200 shadow-sm">
+                      <Calendar size={16} className="text-slate-400" />
                       {config.recurrenceIntervalDays} Days
                     </span>
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-5 text-center">
                     {config.isActive ? (
-                      <span className="badge badge-success">Active</span>
+                      <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm inline-block">Active</span>
                     ) : (
-                      <span className="badge badge-neutral">Inactive</span>
+                      <span className="bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm inline-block">Inactive</span>
                     )}
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-5 text-right">
                     <button 
                       onClick={() => startEdit(config)}
-                      className="text-indigo-600 hover:text-indigo-900 text-sm font-medium bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
+                      className="text-indigo-600 hover:text-white font-bold bg-indigo-50 hover:bg-indigo-600 px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md border border-indigo-100 hover:border-transparent opacity-0 group-hover:opacity-100"
                     >
                       Edit
                     </button>

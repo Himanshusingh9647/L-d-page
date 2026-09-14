@@ -1,10 +1,10 @@
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using LDPortal.API.Data;
 using LDPortal.API.Models.DTOs;
-using LDPortal.API.Models.Entities;
-using LDPortal.API.Services;
 
 namespace LDPortal.API.Controllers;
 
@@ -26,57 +26,7 @@ public class AssignmentsController : ControllerBase
     public async Task<IActionResult> GetMyAssignments()
     {
         var userId = GetCurrentUserId();
-
-        var assignmentsQuery = await _context.TrainingAssignments
-            .Include(a => a.Module)
-                .ThenInclude(m => m.Items)
-            .Where(a => a.UserId == userId && a.IsActive && a.Module.IsActive)
-            .ToListAsync();
-
-        var moduleIds = assignmentsQuery.Select(a => a.ModuleId).ToList();
-        
-        var progresses = await _context.TrainingProgress
-            .Include(p => p.ItemProgresses)
-            .Where(p => p.UserId == userId && moduleIds.Contains(p.ModuleId))
-            .ToDictionaryAsync(p => p.ModuleId);
-
-        var result = assignmentsQuery.Select(ta => {
-            var tm = ta.Module;
-            progresses.TryGetValue(tm.ModuleId, out var tp);
-            
-            return new ProgressDto
-            {
-                ModuleId = tm.ModuleId,
-                ModuleTitle = tm.Title,
-                ModuleType = tm.Type,
-                ModuleDescription = tm.Description,
-                Duration = tm.Duration,
-                DurationSeconds = tm.DurationSeconds,
-                ContentUrl = tm.ContentUrl,
-                PosterUrl = tm.PosterUrl,
-                PolicyContent = tm.PolicyContent,
-                IsRequired = ta.IsRequired,
-                DueDate = ta.DueDate,
-                Status = tp != null ? tp.Status : "NotStarted",
-                ResumeTimeSeconds = tp != null ? tp.ResumeTimeSeconds : 0,
-                MaxWatchedSeconds = tp != null ? tp.MaxWatchedSeconds : 0,
-                VideoWatchedPercent = tp != null ? tp.VideoWatchedPercent : 0,
-                CompletedAt = tp != null ? tp.CompletedAt : null,
-                ConsentedAt = tp != null ? tp.ConsentedAt : null,
-                IsRecurring = ta.IsRecurring,
-                RecurrenceIntervalDays = ta.RecurrenceIntervalDays,
-                CompletedItemIds = tp?.ItemProgresses.Where(ip => ip.IsCompleted).Select(ip => ip.ItemId).ToList() ?? new List<int>(),
-                ItemProgresses = tp?.ItemProgresses.Select(ip => new ItemProgressDto 
-                {
-                    ItemId = ip.ItemId,
-                    ResumeTimeSeconds = ip.ResumeTimeSeconds,
-                    MaxWatchedSeconds = ip.MaxWatchedSeconds,
-                    IsCompleted = ip.IsCompleted
-                }).ToList() ?? new List<ItemProgressDto>()
-            };
-        }).OrderBy(dto => dto.Status != "Completed" ? 0 : 1).ThenBy(dto => dto.DueDate).ThenBy(dto => dto.ModuleTitle).ToList();
-
-        return Ok(ApiResponse<List<ProgressDto>>.Ok(result));
+        return await GetUserAssignmentsInternal(userId);
     }
 
     /// <summary>
@@ -86,42 +36,114 @@ public class AssignmentsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUserAssignments(int userId)
     {
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null)
-            return NotFound(ApiResponse.Fail("User not found."));
+        return await GetUserAssignmentsInternal(userId);
+    }
 
-        var assignments = await (
-            from ta in _context.TrainingAssignments
-            join tm in _context.TrainingModules on ta.ModuleId equals tm.ModuleId
-            join tp in _context.TrainingProgress
-                on new { ta.UserId, ta.ModuleId } equals new { tp.UserId, tp.ModuleId } into tpGroup
-            from tp in tpGroup.DefaultIfEmpty()
-            where ta.UserId == userId && ta.IsActive && tm.IsActive
-            orderby tp == null || tp.Status != "Completed" ? 0 : 1, ta.DueDate, tm.Title
-            select new ProgressDto
+    private async Task<IActionResult> GetUserAssignmentsInternal(int userId)
+    {
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetMyAssignments";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", userId));
+
+        using var reader = await command.ExecuteReaderAsync();
+        var progressDict = new Dictionary<int, ProgressDto>();
+        var itemsByModule = new Dictionary<int, List<ModuleItemDto>>();
+        var itemProgressByProgressId = new Dictionary<int, List<ItemProgressDto>>();
+
+        // Result 1: Assignments with progress
+        while (await reader.ReadAsync())
+        {
+            var dto = new ProgressDto
             {
-                ModuleId = tm.ModuleId,
-                ModuleTitle = tm.Title,
-                ModuleType = tm.Type,
-                ModuleDescription = tm.Description,
-                Duration = tm.Duration,
-                DurationSeconds = tm.DurationSeconds,
-                ContentUrl = tm.ContentUrl,
-                PosterUrl = tm.PosterUrl,
-                IsRequired = ta.IsRequired,
-                DueDate = ta.DueDate,
-                Status = tp != null ? tp.Status : "NotStarted",
-                ResumeTimeSeconds = tp != null ? tp.ResumeTimeSeconds : 0,
-                MaxWatchedSeconds = tp != null ? tp.MaxWatchedSeconds : 0,
-                VideoWatchedPercent = tp != null ? tp.VideoWatchedPercent : 0,
-                CompletedAt = tp != null ? tp.CompletedAt : null,
-                ConsentedAt = tp != null ? tp.ConsentedAt : null,
-                IsRecurring = ta.IsRecurring,
-                RecurrenceIntervalDays = ta.RecurrenceIntervalDays
-            }
-        ).ToListAsync();
+                ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                ModuleTitle = reader.GetString(reader.GetOrdinal("ModuleTitle")),
+                ModuleType = reader.GetString(reader.GetOrdinal("ModuleType")),
+                ModuleDescription = reader.IsDBNull(reader.GetOrdinal("ModuleDescription")) ? null : reader.GetString(reader.GetOrdinal("ModuleDescription")),
+                Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
+                DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
+                ContentUrl = reader.IsDBNull(reader.GetOrdinal("ContentUrl")) ? null : reader.GetString(reader.GetOrdinal("ContentUrl")),
+                PosterUrl = reader.IsDBNull(reader.GetOrdinal("PosterUrl")) ? null : reader.GetString(reader.GetOrdinal("PosterUrl")),
+                PolicyContent = reader.IsDBNull(reader.GetOrdinal("PolicyContent")) ? null : reader.GetString(reader.GetOrdinal("PolicyContent")),
+                IsRequired = reader.GetBoolean(reader.GetOrdinal("IsRequired")),
+                DueDate = reader.IsDBNull(reader.GetOrdinal("DueDate")) ? null : reader.GetDateTime(reader.GetOrdinal("DueDate")),
+                Status = reader.GetString(reader.GetOrdinal("Status")),
+                ResumeTimeSeconds = reader.GetInt32(reader.GetOrdinal("ResumeTimeSeconds")),
+                MaxWatchedSeconds = reader.GetInt32(reader.GetOrdinal("MaxWatchedSeconds")),
+                VideoWatchedPercent = reader.GetDecimal(reader.GetOrdinal("VideoWatchedPercent")),
+                CompletedAt = reader.IsDBNull(reader.GetOrdinal("CompletedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("CompletedAt")),
+                ConsentedAt = reader.IsDBNull(reader.GetOrdinal("ConsentedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("ConsentedAt")),
+                IsRecurring = reader.GetBoolean(reader.GetOrdinal("IsRecurring")),
+                RecurrenceIntervalDays = reader.IsDBNull(reader.GetOrdinal("RecurrenceIntervalDays")) ? null : reader.GetInt32(reader.GetOrdinal("RecurrenceIntervalDays")),
+                ProgressId = reader.IsDBNull(reader.GetOrdinal("ProgressId")) ? 0 : reader.GetInt32(reader.GetOrdinal("ProgressId"))
+            };
+            progressDict[dto.ModuleId] = dto;
+        }
 
-        return Ok(ApiResponse<List<ProgressDto>>.Ok(assignments));
+        // Result 2: Module Items
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                var moduleId = reader.GetInt32(reader.GetOrdinal("ModuleId"));
+                if (!itemsByModule.TryGetValue(moduleId, out var items))
+                {
+                    items = new List<ModuleItemDto>();
+                    itemsByModule[moduleId] = items;
+                }
+                items.Add(new ModuleItemDto
+                {
+                    ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
+                    Title = reader.GetString(reader.GetOrdinal("Title")),
+                    ContentUrl = reader.GetString(reader.GetOrdinal("ContentUrl")),
+                    OrderIndex = reader.GetInt32(reader.GetOrdinal("OrderIndex")),
+                    DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds"))
+                });
+            }
+        }
+
+        // Result 3: Item Progress
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                var progressId = reader.GetInt32(reader.GetOrdinal("ProgressId"));
+                if (!itemProgressByProgressId.TryGetValue(progressId, out var ips))
+                {
+                    ips = new List<ItemProgressDto>();
+                    itemProgressByProgressId[progressId] = ips;
+                }
+                ips.Add(new ItemProgressDto
+                {
+                    ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
+                    ResumeTimeSeconds = reader.GetInt32(reader.GetOrdinal("ResumeTimeSeconds")),
+                    MaxWatchedSeconds = reader.GetInt32(reader.GetOrdinal("MaxWatchedSeconds")),
+                    IsCompleted = reader.GetBoolean(reader.GetOrdinal("IsCompleted"))
+                });
+            }
+        }
+
+        // Combine
+        foreach (var p in progressDict.Values)
+        {
+            if (itemsByModule.TryGetValue(p.ModuleId, out var items))
+                p.Items = items;
+            if (p.ProgressId > 0 && itemProgressByProgressId.TryGetValue(p.ProgressId, out var ips))
+            {
+                p.ItemProgresses = ips;
+                p.CompletedItemIds = ips.Where(ip => ip.IsCompleted).Select(ip => ip.ItemId).ToList();
+            }
+        }
+
+        var resultList = progressDict.Values
+            .OrderBy(dto => dto.Status != "Completed" ? 0 : 1)
+            .ThenBy(dto => dto.DueDate)
+            .ThenBy(dto => dto.ModuleTitle)
+            .ToList();
+
+        return Ok(ApiResponse<List<ProgressDto>>.Ok(resultList));
     }
 
     /// <summary>
@@ -131,58 +153,64 @@ public class AssignmentsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetMatrix()
     {
-        var employees = await _context.Users
-            .Where(u => u.Role == "Employee" && u.IsActive)
-            .OrderBy(u => u.FullName)
-            .Select(u => new UserDto
-            {
-                UserId = u.UserId,
-                EmployeeCode = u.EmployeeCode,
-                FullName = u.FullName,
-                Email = u.Email,
-                Department = u.Department,
-                Role = u.Role,
-                Initials = u.Initials
-            })
-            .ToListAsync();
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetAssignmentMatrix";
+        command.CommandType = CommandType.StoredProcedure;
 
-        var modules = await _context.TrainingModules
-            .Where(m => m.IsActive)
-            .OrderBy(m => m.Title)
-            .Select(m => new ModuleDto
-            {
-                ModuleId = m.ModuleId,
-                Title = m.Title,
-                Type = m.Type,
-                Description = m.Description,
-                Duration = m.Duration,
-                IsActive = m.IsActive
-            })
-            .ToListAsync();
+        using var reader = await command.ExecuteReaderAsync();
+        
+        var matrix = new TrainingMatrixDto();
 
-        var assignments = await (
-            from ta in _context.TrainingAssignments
-            join tp in _context.TrainingProgress
-                on new { ta.UserId, ta.ModuleId } equals new { tp.UserId, tp.ModuleId } into tpGroup
-            from tp in tpGroup.DefaultIfEmpty()
-            where ta.IsActive
-            select new MatrixCellDto
-            {
-                UserId = ta.UserId,
-                ModuleId = ta.ModuleId,
-                IsAssigned = true,
-                IsRequired = ta.IsRequired,
-                DueDate = ta.DueDate,
-                Status = tp != null ? tp.Status : "NotStarted"
-            }
-        ).ToListAsync();
-
-        var matrix = new TrainingMatrixDto
+        // Result 1: Employees
+        while (await reader.ReadAsync())
         {
-            Employees = employees,
-            Modules = modules,
-            Assignments = assignments
-        };
+            matrix.Employees.Add(new UserDto
+            {
+                UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                EmployeeCode = reader.GetString(reader.GetOrdinal("EmployeeCode")),
+                FullName = reader.GetString(reader.GetOrdinal("FullName")),
+                Email = reader.GetString(reader.GetOrdinal("Email")),
+                Department = reader.GetString(reader.GetOrdinal("Department")),
+                Role = reader.GetString(reader.GetOrdinal("Role")),
+                Initials = reader.GetString(reader.GetOrdinal("Initials"))
+            });
+        }
+
+        // Result 2: Modules
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                matrix.Modules.Add(new ModuleDto
+                {
+                    ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                    Title = reader.GetString(reader.GetOrdinal("Title")),
+                    Type = reader.GetString(reader.GetOrdinal("Type")),
+                    Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
+                    Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
+                    IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive"))
+                });
+            }
+        }
+
+        // Result 3: Assignments
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                matrix.Assignments.Add(new MatrixCellDto
+                {
+                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                    ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                    IsAssigned = reader.GetBoolean(reader.GetOrdinal("IsAssigned")),
+                    IsRequired = reader.GetBoolean(reader.GetOrdinal("IsRequired")),
+                    DueDate = reader.IsDBNull(reader.GetOrdinal("DueDate")) ? null : reader.GetDateTime(reader.GetOrdinal("DueDate")),
+                    Status = reader.GetString(reader.GetOrdinal("Status"))
+                });
+            }
+        }
 
         return Ok(ApiResponse<TrainingMatrixDto>.Ok(matrix));
     }
@@ -204,54 +232,31 @@ public class AssignmentsController : ControllerBase
         var created = 0;
         var skipped = 0;
 
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
         foreach (var userId in request.UserIds)
         {
-            var userExists = await _context.Users.AnyAsync(u => u.UserId == userId && u.IsActive);
-            if (!userExists) continue;
-
             foreach (var moduleId in request.ModuleIds)
             {
-                var moduleExists = await _context.TrainingModules.AnyAsync(m => m.ModuleId == moduleId && m.IsActive);
-                if (!moduleExists) continue;
+                using var command = connection.CreateCommand();
+                command.CommandText = "dbo.sp_CreateAssignment";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@UserId", userId));
+                command.Parameters.Add(new SqlParameter("@ModuleId", moduleId));
+                command.Parameters.Add(new SqlParameter("@IsRequired", request.IsRequired));
+                command.Parameters.Add(new SqlParameter("@DueDate", (object?)request.DueDate ?? DBNull.Value));
+                command.Parameters.Add(new SqlParameter("@AssignedBy", adminId));
 
-                // Check if assignment already exists
-                var existing = await _context.TrainingAssignments
-                    .FirstOrDefaultAsync(a => a.UserId == userId && a.ModuleId == moduleId);
-
-                if (existing != null)
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
                 {
-                    if (!existing.IsActive)
-                    {
-                        existing.IsActive = true;
-                        existing.IsRequired = request.IsRequired;
-                        existing.DueDate = request.DueDate;
-                        existing.AssignedBy = adminId;
-                        existing.AssignedAt = DateTime.UtcNow;
-                        created++;
-                    }
-                    else
-                    {
-                        skipped++;
-                    }
-                    continue;
+                    created += reader.GetInt32(reader.GetOrdinal("Created"));
+                    skipped += reader.GetInt32(reader.GetOrdinal("Skipped"));
                 }
-
-                var assignment = new TrainingAssignment
-                {
-                    UserId = userId,
-                    ModuleId = moduleId,
-                    IsRequired = request.IsRequired,
-                    DueDate = request.DueDate,
-                    AssignedBy = adminId,
-                    AssignedAt = DateTime.UtcNow
-                };
-
-                _context.TrainingAssignments.Add(assignment);
-                created++;
             }
         }
 
-        await _context.SaveChangesAsync();
         return Ok(ApiResponse.Ok($"Successfully assigned {created} training(s). {skipped} already existed."));
     }
 
@@ -265,17 +270,23 @@ public class AssignmentsController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse.Fail("Invalid request data."));
 
-        var assignment = await _context.TrainingAssignments
-            .FirstOrDefaultAsync(a => a.UserId == request.UserId && a.ModuleId == request.ModuleId && a.IsActive);
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_RemoveAssignment";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", request.UserId));
+        command.Parameters.Add(new SqlParameter("@ModuleId", request.ModuleId));
 
-        if (assignment == null)
-            return NotFound(ApiResponse.Fail("Assignment not found."));
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            var removed = reader.GetInt32(reader.GetOrdinal("Removed"));
+            if (removed > 0)
+                return Ok(ApiResponse.Ok("Assignment removed successfully."));
+        }
 
-        assignment.IsActive = false;
-        await _context.SaveChangesAsync();
-
-        var adminId = GetCurrentUserId();
-        return Ok(ApiResponse.Ok("Assignment removed successfully."));
+        return NotFound(ApiResponse.Fail("Assignment not found."));
     }
 
     private int GetCurrentUserId()

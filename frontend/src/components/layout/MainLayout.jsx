@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import NotificationsDropdown from './NotificationsDropdown';
 
 export default function MainLayout({ requiredRole }) {
   const { isAuthenticated, user, loading } = useAuth();
@@ -48,9 +49,16 @@ export default function MainLayout({ requiredRole }) {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <main className={`flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-end px-8 shrink-0 z-40 sticky top-0">
+          <NotificationsDropdown />
+        </header>
+        
+        <main className="flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300 p-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

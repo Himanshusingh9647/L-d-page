@@ -1,10 +1,10 @@
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using LDPortal.API.Data;
 using LDPortal.API.Models.DTOs;
-using LDPortal.API.Models.Entities;
-using LDPortal.API.Services;
 
 namespace LDPortal.API.Controllers;
 
@@ -25,22 +25,29 @@ public class RecurringController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var configs = await _context.RecurringTrainingConfigs
-            .Include(rc => rc.Module)
-            .Include(rc => rc.Creator)
-            .OrderBy(rc => rc.Module.Title)
-            .Select(rc => new RecurringConfigDto
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetRecurringConfigs";
+        command.CommandType = CommandType.StoredProcedure;
+
+        using var reader = await command.ExecuteReaderAsync();
+        var configs = new List<RecurringConfigDto>();
+
+        while (await reader.ReadAsync())
+        {
+            configs.Add(new RecurringConfigDto
             {
-                ConfigId = rc.ConfigId,
-                ModuleId = rc.ModuleId,
-                ModuleTitle = rc.Module.Title,
-                ModuleType = rc.Module.Type,
-                RecurrenceIntervalDays = rc.RecurrenceIntervalDays,
-                IsActive = rc.IsActive,
-                CreatedByName = rc.Creator != null ? rc.Creator.FullName : null,
-                CreatedAt = rc.CreatedAt
-            })
-            .ToListAsync();
+                ConfigId = reader.GetInt32(reader.GetOrdinal("ConfigId")),
+                ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                ModuleTitle = reader.GetString(reader.GetOrdinal("ModuleTitle")),
+                ModuleType = reader.GetString(reader.GetOrdinal("ModuleType")),
+                RecurrenceIntervalDays = reader.GetInt32(reader.GetOrdinal("RecurrenceIntervalDays")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
+                CreatedByName = reader.IsDBNull(reader.GetOrdinal("CreatedByName")) ? null : reader.GetString(reader.GetOrdinal("CreatedByName")),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+            });
+        }
 
         return Ok(ApiResponse<List<RecurringConfigDto>>.Ok(configs));
     }
@@ -54,48 +61,28 @@ public class RecurringController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse.Fail("Invalid request data."));
 
-        // Check module exists
-        var module = await _context.TrainingModules.FindAsync(request.ModuleId);
-        if (module == null || !module.IsActive)
-            return NotFound(ApiResponse.Fail("Module not found."));
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_CreateRecurringConfig";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@ModuleId", request.ModuleId));
+        command.Parameters.Add(new SqlParameter("@RecurrenceIntervalDays", request.RecurrenceIntervalDays));
+        command.Parameters.Add(new SqlParameter("@CreatedBy", GetCurrentUserId()));
 
-        // Check if config already exists for this module
-        var existing = await _context.RecurringTrainingConfigs
-            .FirstOrDefaultAsync(rc => rc.ModuleId == request.ModuleId);
-
-        if (existing != null)
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            existing.RecurrenceIntervalDays = request.RecurrenceIntervalDays;
-            existing.IsActive = true;
-            existing.UpdatedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            var config = new RecurringTrainingConfig
-            {
-                ModuleId = request.ModuleId,
-                RecurrenceIntervalDays = request.RecurrenceIntervalDays,
-                CreatedBy = GetCurrentUserId(),
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.RecurringTrainingConfigs.Add(config);
+            var success = reader.GetInt32(reader.GetOrdinal("Success")) == 1;
+            var message = reader.GetString(reader.GetOrdinal("Message"));
+            
+            if (success)
+                return Ok(ApiResponse.Ok(message));
+            else
+                return BadRequest(ApiResponse.Fail(message));
         }
 
-        // Also update assignments for this module to mark them as recurring
-        var assignments = await _context.TrainingAssignments
-            .Where(a => a.ModuleId == request.ModuleId && a.IsActive)
-            .ToListAsync();
-
-        foreach (var assignment in assignments)
-        {
-            assignment.IsRecurring = true;
-            assignment.RecurrenceIntervalDays = request.RecurrenceIntervalDays;
-        }
-
-        await _context.SaveChangesAsync();
-
-        var adminId = GetCurrentUserId();
-        return Ok(ApiResponse.Ok($"Recurring training configured for '{module.Title}' every {request.RecurrenceIntervalDays} days."));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     /// <summary>
@@ -107,32 +94,28 @@ public class RecurringController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse.Fail("Invalid request data."));
 
-        var config = await _context.RecurringTrainingConfigs
-            .Include(rc => rc.Module)
-            .FirstOrDefaultAsync(rc => rc.ConfigId == configId);
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_UpdateRecurringConfig";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@ConfigId", configId));
+        command.Parameters.Add(new SqlParameter("@RecurrenceIntervalDays", request.RecurrenceIntervalDays));
+        command.Parameters.Add(new SqlParameter("@IsActive", request.IsActive));
 
-        if (config == null)
-            return NotFound(ApiResponse.Fail("Recurring configuration not found."));
-
-        config.RecurrenceIntervalDays = request.RecurrenceIntervalDays;
-        config.IsActive = request.IsActive;
-        config.UpdatedAt = DateTime.UtcNow;
-
-        // Update related assignments
-        var assignments = await _context.TrainingAssignments
-            .Where(a => a.ModuleId == config.ModuleId && a.IsActive)
-            .ToListAsync();
-
-        foreach (var assignment in assignments)
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            assignment.IsRecurring = request.IsActive;
-            assignment.RecurrenceIntervalDays = request.IsActive ? request.RecurrenceIntervalDays : null;
+            var success = reader.GetInt32(reader.GetOrdinal("Success")) == 1;
+            var message = reader.GetString(reader.GetOrdinal("Message"));
+            
+            if (success)
+                return Ok(ApiResponse.Ok(message));
+            else
+                return BadRequest(ApiResponse.Fail(message));
         }
 
-        await _context.SaveChangesAsync();
-
-        var adminId = GetCurrentUserId();
-        return Ok(ApiResponse.Ok("Recurring configuration updated successfully."));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     /// <summary>
@@ -141,31 +124,26 @@ public class RecurringController : ControllerBase
     [HttpDelete("{configId}")]
     public async Task<IActionResult> Delete(int configId)
     {
-        var config = await _context.RecurringTrainingConfigs
-            .Include(rc => rc.Module)
-            .FirstOrDefaultAsync(rc => rc.ConfigId == configId);
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_DeleteRecurringConfig";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@ConfigId", configId));
 
-        if (config == null)
-            return NotFound(ApiResponse.Fail("Recurring configuration not found."));
-
-        config.IsActive = false;
-        config.UpdatedAt = DateTime.UtcNow;
-
-        // Remove recurring flag from assignments
-        var assignments = await _context.TrainingAssignments
-            .Where(a => a.ModuleId == config.ModuleId && a.IsActive)
-            .ToListAsync();
-
-        foreach (var assignment in assignments)
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            assignment.IsRecurring = false;
-            assignment.RecurrenceIntervalDays = null;
+            var success = reader.GetInt32(reader.GetOrdinal("Success")) == 1;
+            var message = reader.GetString(reader.GetOrdinal("Message"));
+            
+            if (success)
+                return Ok(ApiResponse.Ok(message));
+            else
+                return NotFound(ApiResponse.Fail(message));
         }
 
-        await _context.SaveChangesAsync();
-
-        var adminId = GetCurrentUserId();
-        return Ok(ApiResponse.Ok("Recurring configuration disabled successfully."));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     private int GetCurrentUserId()

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Play, FileText, Loader2, RefreshCw, Trash2, Edit2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Play, FileText, Loader2, RefreshCw, Trash2, Edit2, UploadCloud, CheckCircle } from "lucide-react";
 import { modulesApi, mediaApi } from "../../api/apiClient";
 
 export default function AdminModules() {
@@ -8,6 +8,13 @@ export default function AdminModules() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Upload State
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const fileInputRef = useRef(null);
   
   const [editingModuleId, setEditingModuleId] = useState(null);
   
@@ -51,6 +58,42 @@ export default function AdminModules() {
     }
   };
 
+  const handleFileDrop = async (e) => {
+    e.preventDefault();
+    if (uploading) return;
+    
+    const file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
+    if (!file) return;
+
+    await uploadFile(file);
+  };
+
+  const uploadFile = async (file) => {
+    setUploading(true);
+    setUploadProgress(0);
+    setUploadError("");
+    setUploadSuccess("");
+
+    try {
+      const res = await mediaApi.upload(file, (percent) => {
+        setUploadProgress(percent);
+      });
+      setUploadSuccess(`Successfully uploaded ${res.data.data.fileName}`);
+      await refreshMedia();
+      
+      // Auto-select the uploaded file if we are editing an item
+      if (newModule.items.length === 1 && !newModule.items[0].contentUrl) {
+        handleItemChange(0, 'contentUrl', res.data.data.fileName);
+      }
+    } catch (error) {
+      console.error("Upload failed", error);
+      setUploadError(error.response?.data?.message || "Upload failed. Max size is 500MB.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
+    }
+  };
+
   const handleAddItem = () => {
     setNewModule({
       ...newModule,
@@ -72,17 +115,18 @@ export default function AdminModules() {
   const openCreateModal = () => {
     setEditingModuleId(null);
     setNewModule(initialModuleState);
+    setUploadError("");
+    setUploadSuccess("");
     setIsModalOpen(true);
   };
 
   const openEditModal = async (module) => {
     setEditingModuleId(module.moduleId);
+    setUploadError("");
+    setUploadSuccess("");
     
-    // Some modules might not have items populated in the summary list if the API doesn't return them, 
-    // but our backend GetAll now returns items. Let's make sure items exist.
     const items = module.items && module.items.length > 0 ? module.items.map(item => ({
       title: item.title,
-      // Strip out the base URL to just get the filename
       contentUrl: item.contentUrl ? item.contentUrl.split('/').pop() : ""
     })) : [{ title: "Part 1", contentUrl: "" }];
 
@@ -106,15 +150,15 @@ export default function AdminModules() {
       
       const payload = {
         title: newModule.title,
-        type: newModule.type, // Usually type isn't updated in our DTO but we pass it anyway
+        type: newModule.type,
         description: newModule.description,
         duration: durationMins.toString(),
         durationSeconds: durationMins * 60,
         policyContent: newModule.policyContent,
-        isActive: true, // required by UpdateModuleRequest
+        isActive: true,
         items: newModule.items.map(item => ({
           title: item.title,
-          contentUrl: item.contentUrl ? `http://localhost:5155/media/${item.contentUrl}` : "",
+          contentUrl: item.contentUrl ? `${import.meta.env.VITE_API_URL || 'http://localhost:5155'}/media/${item.contentUrl}` : "",
         }))
       };
 
@@ -146,98 +190,167 @@ export default function AdminModules() {
 
   return (
     <div className="p-8">
-      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex justify-between items-center">
+      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex justify-between items-center bg-white shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Module Management</h1>
-          <p className="text-slate-500 mt-1">Manage training modules and linked media files.</p>
+          <p className="text-sm text-slate-500 mt-1">Manage training modules and video assets.</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="btn-primary"
-        >
+        <button onClick={openCreateModal} className="btn-primary shadow-md hover:shadow-lg">
           <Plus className="h-4 w-4" />
           <span>New Module</span>
         </button>
       </div>
 
-      <div className="card">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="p-4 text-sm font-semibold text-slate-600">Title</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Type</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Duration</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Items</th>
-              <th className="p-4 text-sm font-semibold text-slate-600 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {modules.map((module) => (
-              <tr key={module.moduleId} className="hover:bg-slate-50 transition-colors">
-                <td className="p-4">
-                  <p className="text-sm font-semibold text-slate-800">{module.title}</p>
-                  <p className="text-xs text-slate-500 truncate max-w-xs">{module.description}</p>
-                </td>
-                <td className="p-4">
-                  <span className={`badge ${
-                    module.type === 'Video' ? 'badge-info' : 'badge-warning'
-                  }`}>
-                    {module.type === 'Video' ? <Play className="h-3 w-3 mr-1" /> : <FileText className="h-3 w-3 mr-1" />}
-                    <span>{module.type}</span>
-                  </span>
-                </td>
-                <td className="p-4 text-sm font-medium text-slate-600">
-                  {module.duration} mins
-                </td>
-                <td className="p-4 text-xs font-medium text-slate-600">
-                  {module.items?.length || 0} part(s)
-                </td>
-                <td className="p-4 text-right">
-                  <button 
-                    onClick={() => openEditModal(module)}
-                    className="p-2 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors inline-flex"
-                    title="Edit Module"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                </td>
+      <div className="card shadow-sm border-slate-100">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Title</th>
+                <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Duration</th>
+                <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Items</th>
+                <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
-            ))}
-            {modules.length === 0 && (
-              <tr>
-                <td colSpan="5" className="p-8 text-center text-slate-500">
-                  No modules found. Create one to get started.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {modules.map((module) => (
+                <tr key={module.moduleId} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="p-4">
+                    <p className="text-sm font-semibold text-slate-700">{module.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">{module.description}</p>
+                  </td>
+                  <td className="p-4">
+                    <span className={`badge ${
+                      module.type === 'Video' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+                    }`}>
+                      {module.type === 'Video' ? <Play className="h-3 w-3 mr-1.5" /> : <FileText className="h-3 w-3 mr-1.5" />}
+                      {module.type}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm font-medium text-slate-600">
+                    {module.duration} mins
+                  </td>
+                  <td className="p-4 text-sm font-medium text-slate-600">
+                    {module.items?.length || 0} part(s)
+                  </td>
+                  <td className="p-4 text-right">
+                    <button 
+                      onClick={() => openEditModal(module)}
+                      className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors inline-flex"
+                      title="Edit Module"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {modules.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-slate-400 text-sm">
+                    No modules found. Create one to get started.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="card w-full max-w-lg shadow-2xl animate-fade-in max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-slate-200 shrink-0">
-              <h2 className="text-xl font-bold text-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="card w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col border-0">
+            <div className="p-6 border-b border-slate-100 shrink-0 bg-white">
+              <h2 className="text-xl font-bold text-slate-800 tracking-tight">
                 {editingModuleId ? "Edit Module" : "Create New Module"}
               </h2>
               <p className="text-sm text-slate-500 mt-1">
-                {editingModuleId ? "Update the details and parts of this module." : "Add one or more parts to build a course playlist."}
+                Configure module details and upload or select media files.
               </p>
             </div>
             
             <form onSubmit={handleSubmitModule} className="flex flex-col overflow-hidden h-full">
-              <div className="p-6 space-y-4 bg-slate-50 overflow-y-auto">
-                <div className="form-group">
-                  <label className="form-label">Course Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={newModule.title}
-                    onChange={e => setNewModule({...newModule, title: e.target.value})}
-                    className="input-field"
-                    placeholder="E.g., React Masterclass"
-                  />
+              <div className="p-6 space-y-6 bg-slate-50 overflow-y-auto">
+                
+                {/* File Upload Section */}
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3 tracking-tight">Upload Media</h3>
+                  
+                  <label 
+                    className={`upload-zone flex flex-col items-center justify-center ${uploading ? 'uploading' : ''}`}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleFileDrop}
+                  >
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      ref={fileInputRef}
+                      accept=".mp4,.webm,.pdf" 
+                      onChange={handleFileDrop}
+                      disabled={uploading}
+                    />
+                    
+                    {uploading ? (
+                      <div className="w-full max-w-xs">
+                        <div className="flex justify-between text-xs mb-1 font-medium text-slate-600">
+                          <span>Uploading...</span>
+                          <span>{uploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div 
+                            className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-3 shadow-sm">
+                          <UploadCloud className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-medium text-slate-700">Click to upload or drag and drop</p>
+                        <p className="text-xs text-slate-500 mt-1">MP4, WEBM, PDF up to 500MB</p>
+                      </>
+                    )}
+                  </label>
+
+                  {uploadSuccess && (
+                    <div className="mt-3 p-3 bg-emerald-50 text-emerald-700 text-sm rounded-lg flex items-center border border-emerald-100">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {uploadSuccess}
+                    </div>
+                  )}
+                  {uploadError && (
+                    <div className="mt-3 p-3 bg-rose-50 text-rose-700 text-sm rounded-lg border border-rose-100">
+                      {uploadError}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="form-group mb-0">
+                    <label className="form-label">Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={newModule.title}
+                      onChange={e => setNewModule({...newModule, title: e.target.value})}
+                      className="input-field"
+                      placeholder="E.g., Security Training"
+                    />
+                  </div>
+                  <div className="form-group mb-0">
+                    <label className="form-label">Type</label>
+                    <select
+                      value={newModule.type}
+                      onChange={e => setNewModule({...newModule, type: e.target.value})}
+                      className="input-field"
+                      disabled={!!editingModuleId}
+                    >
+                      <option value="Video">Video Course</option>
+                      <option value="PDF">Document</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -247,65 +360,51 @@ export default function AdminModules() {
                     value={newModule.description}
                     onChange={e => setNewModule({...newModule, description: e.target.value})}
                     className="input-field resize-none h-20"
-                    placeholder="Brief description of the overall module..."
+                    placeholder="Brief description..."
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label className="form-label">Type</label>
-                    <select
-                      value={newModule.type}
-                      onChange={e => setNewModule({...newModule, type: e.target.value})}
-                      className="input-field"
-                      disabled={!!editingModuleId} // Disable changing type if editing
-                    >
-                      <option value="Video">Video Course</option>
-                      <option value="PDF">Document</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Est. Total Duration (mins)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={newModule.duration}
-                      onChange={e => setNewModule({...newModule, duration: e.target.value})}
-                      className="input-field"
-                    />
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">Total Duration (mins)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={newModule.duration}
+                    onChange={e => setNewModule({...newModule, duration: e.target.value})}
+                    className="input-field w-1/2"
+                  />
                 </div>
 
                 <div className="pt-2 border-t border-slate-200">
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Playlist Items</h3>
-                    <button type="button" onClick={refreshMedia} className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center font-medium">
-                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh files
+                    <h3 className="text-sm font-bold text-slate-800 tracking-tight">Playlist Items</h3>
+                    <button type="button" onClick={refreshMedia} className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center font-medium bg-indigo-50 px-2 py-1 rounded-md">
+                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh list
                     </button>
                   </div>
 
                   <div className="space-y-3">
                     {newModule.items.map((item, index) => (
-                      <div key={index} className="flex items-start gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                        <div className="flex-1 space-y-2">
+                      <div key={index} className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex-1 grid gap-3">
                           <input
                             type="text"
                             required
                             value={item.title}
                             onChange={e => handleItemChange(index, 'title', e.target.value)}
-                            className="input-field py-1.5 text-sm"
+                            className="input-field text-sm"
                             placeholder={`Part ${index + 1} Title`}
                           />
                           <select
                             required
                             value={item.contentUrl}
                             onChange={e => handleItemChange(index, 'contentUrl', e.target.value)}
-                            className="input-field py-1.5 text-sm"
+                            className="input-field text-sm font-medium"
                           >
-                            <option value="">-- Select {newModule.type} file --</option>
+                            <option value="">-- Select uploaded file --</option>
                             {availableMedia
-                              .filter(f => newModule.type === 'Video' ? f.toLowerCase().endsWith('.mp4') : f.toLowerCase().endsWith('.pdf'))
+                              .filter(f => newModule.type === 'Video' ? f.toLowerCase().match(/\.(mp4|webm)$/) : f.toLowerCase().endsWith('.pdf'))
                               .map(file => (
                               <option key={file} value={file}>{file}</option>
                             ))}
@@ -315,9 +414,9 @@ export default function AdminModules() {
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(index)}
-                            className="text-slate-400 hover:text-rose-500 p-2"
+                            className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors mt-0.5"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-5 w-5" />
                           </button>
                         )}
                       </div>
@@ -327,26 +426,26 @@ export default function AdminModules() {
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="mt-3 text-sm text-indigo-600 font-medium hover:text-indigo-700 flex items-center"
+                    className="mt-4 text-sm text-indigo-600 font-semibold hover:text-indigo-700 flex items-center py-2 px-3 rounded-lg hover:bg-indigo-50 transition-colors"
                   >
-                    <Plus className="h-4 w-4 mr-1" /> Add another part
+                    <Plus className="h-4 w-4 mr-1.5" /> Add Part
                   </button>
                 </div>
 
                 {newModule.type === 'PDF' && (
-                  <div className="form-group pt-4 border-t border-slate-200">
-                    <label className="form-label">Policy Content / Consent Text</label>
+                  <div className="form-group pt-5 border-t border-slate-200">
+                    <label className="form-label">Consent Text</label>
                     <textarea
                       value={newModule.policyContent}
                       onChange={e => setNewModule({...newModule, policyContent: e.target.value})}
                       className="input-field resize-none h-20"
-                      placeholder="E.g., I have read and agree to these policies."
+                      placeholder="I have read and agree..."
                     />
                   </div>
                 )}
               </div>
 
-              <div className="p-6 border-t border-slate-200 shrink-0 flex space-x-3 bg-white">
+              <div className="p-5 border-t border-slate-100 shrink-0 flex space-x-3 bg-white">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -356,10 +455,10 @@ export default function AdminModules() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || newModule.items.length === 0}
+                  disabled={submitting || newModule.items.length === 0 || uploading}
                   className="btn-primary flex-1"
                 >
-                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingModuleId ? "Save Changes" : "Create Course")}
+                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingModuleId ? "Save Changes" : "Create Module")}
                 </button>
               </div>
             </form>

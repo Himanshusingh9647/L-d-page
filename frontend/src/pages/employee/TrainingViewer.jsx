@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { modulesApi, progressApi, assignmentsApi } from '../../api/apiClient';
-import { ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, ListVideo, PlayCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, ListVideo, PlayCircle, Lock } from 'lucide-react';
 
 export default function TrainingViewer() {
   const { moduleId } = useParams();
@@ -21,6 +21,8 @@ export default function TrainingViewer() {
   // PDF specific state
   const [pdfConsented, setPdfConsented] = useState(false);
   const [consentError, setConsentError] = useState('');
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const scrollContainerRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -42,6 +44,7 @@ export default function TrainingViewer() {
         if (myProgress.status === 'Completed') {
           setIsVideoComplete(true);
           setPdfConsented(true);
+          setHasScrolledToBottom(true);
         }
         
         if (moduleData.type === 'Video' && moduleData.items?.length > 0) {
@@ -90,7 +93,7 @@ export default function TrainingViewer() {
     const currentTime = videoRef.current.currentTime;
     const duration = videoRef.current.duration;
     
-    // Prevent skipping ahead
+    // Perfect Tracking: Anti-skip logic (max 2 seconds ahead of maxWatched allowed for buffering)
     if (currentTime > maxWatched + 2) {
       videoRef.current.currentTime = maxWatched;
       return;
@@ -100,8 +103,8 @@ export default function TrainingViewer() {
       setMaxWatched(currentTime);
     }
 
-    // Save progress periodically (e.g., every 5 seconds)
-    if (Math.floor(currentTime) % 5 === 0 && currentTime > 0) {
+    // Save progress periodically (debounced/throttled conceptually via modulo 3 seconds)
+    if (Math.floor(currentTime) % 3 === 0 && currentTime > 0) {
       const percent = (currentTime / duration) * 100;
       try {
         await progressApi.updateVideoTime({
@@ -116,7 +119,7 @@ export default function TrainingViewer() {
       }
     }
 
-    // Mark complete at 95%
+    // Mark complete atomically at 95%
     if ((currentTime / duration) >= 0.95 && !isVideoComplete) {
       setIsVideoComplete(true);
       try {
@@ -146,7 +149,22 @@ export default function TrainingViewer() {
     }
   };
 
+  const handleScroll = (e) => {
+    if (pdfConsented || hasScrolledToBottom) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    // Consider it scrolled to bottom if within 50px of the bottom
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      setHasScrolledToBottom(true);
+    }
+  };
+
   const handlePdfConsent = async () => {
+    if (!hasScrolledToBottom) {
+      setConsentError('Please read through the entire document first.');
+      return;
+    }
+
     try {
       await progressApi.consentPdf({ moduleId: module.moduleId });
       setPdfConsented(true);
@@ -156,32 +174,32 @@ export default function TrainingViewer() {
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!module) return <div className="p-8">Training module not found.</div>;
+  if (loading) return <div className="p-8 h-screen flex items-center justify-center text-slate-500">Loading...</div>;
+  if (!module) return <div className="p-8 h-screen flex items-center justify-center text-slate-500">Training module not found.</div>;
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
-      <div className="bg-slate-800 text-white p-4 flex items-center justify-between border-b border-slate-700 shadow-md shrink-0">
+    <div className="h-screen bg-slate-900 flex flex-col font-sans overflow-hidden">
+      <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-slate-700 rounded-full transition-colors">
+          <button onClick={() => navigate('/')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="font-bold text-lg">{module.title}</h1>
-            <p className="text-xs text-slate-400">{module.type} Module</p>
+            <h1 className="font-semibold text-lg tracking-tight">{module.title}</h1>
+            <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">{module.type} Module</p>
           </div>
         </div>
         
         <div>
           {progress?.status === 'Completed' ? (
-            <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg font-medium text-sm">
-              <CheckCircle2 size={16} />
-              Completed on {new Date(progress.completedAt).toLocaleDateString()}
+            <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-full font-medium text-xs tracking-wide uppercase">
+              <CheckCircle2 size={14} />
+              Completed {new Date(progress.completedAt).toLocaleDateString()}
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-amber-500/20 text-amber-400 px-4 py-2 rounded-lg font-medium text-sm">
-              <AlertCircle size={16} />
-              Course In Progress
+            <div className="flex items-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-full font-medium text-xs tracking-wide uppercase">
+              <AlertCircle size={14} />
+              In Progress
             </div>
           )}
         </div>
@@ -192,9 +210,9 @@ export default function TrainingViewer() {
         {/* Main Content Area */}
         <div className="flex-1 bg-black flex flex-col justify-center relative">
           {module.type === 'Video' ? (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center p-4">
               {currentItem?.contentUrl ? (
-                <div className="relative w-full h-full max-h-screen flex flex-col items-center justify-center bg-black group">
+                <div className="relative w-full h-full max-w-5xl mx-auto flex flex-col items-center justify-center group bg-black rounded-xl overflow-hidden ring-1 ring-white/10 shadow-2xl">
                   <video
                     key={currentItem.itemId} // forces remount on source change
                     ref={videoRef}
@@ -204,7 +222,7 @@ export default function TrainingViewer() {
                     disablePictureInPicture
                     onTimeUpdate={handleVideoTimeUpdate}
                     onLoadedMetadata={handleVideoLoaded}
-                    className="w-full h-full object-contain max-h-[80vh]"
+                    className="w-full h-full object-contain"
                     autoPlay={false}
                   >
                     Your browser does not support the video tag.
@@ -212,89 +230,105 @@ export default function TrainingViewer() {
                   
                   {/* Custom Play Button Overlay for incomplete videos */}
                   {!isVideoComplete && (
-                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
                        <button 
                          onClick={() => videoRef.current?.paused ? videoRef.current?.play() : videoRef.current?.pause()}
-                         className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium shadow-lg transition-colors flex items-center gap-2"
+                         className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg"
                        >
-                         <PlayCircle size={18} />
-                         {videoRef.current?.paused ? 'Play' : 'Pause'}
+                         {videoRef.current?.paused ? <PlayCircle size={20} className="ml-1" /> : <div className="w-3 h-3 bg-white" style={{ clipPath: 'polygon(0 0, 35% 0, 35% 100%, 0 100%, 65% 0, 100% 0, 100% 100%, 65% 100%)' }} />}
                        </button>
-                       <div className="flex-1 bg-white/20 h-2.5 rounded-full overflow-hidden">
+                       <div className="flex-1 bg-white/20 h-1.5 rounded-full overflow-hidden">
                          <div 
-                           className="bg-indigo-500 h-full transition-all duration-300" 
+                           className="bg-indigo-500 h-full transition-all duration-300 relative" 
                            style={{ width: `${(maxWatched / (videoRef.current?.duration || 1)) * 100}%` }}
-                         ></div>
+                         >
+                            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full"></div>
+                         </div>
                        </div>
-                       <span className="text-xs text-white/90 font-mono bg-black/50 px-2 py-1 rounded">
+                       <span className="text-xs text-white/70 font-mono tracking-wider">
                           {Math.floor(videoRef.current?.currentTime || 0)}s / {Math.floor(videoRef.current?.duration || 0)}s
                        </span>
                     </div>
                   )}
 
                   {isVideoComplete && (
-                    <div className="absolute top-4 right-4 bg-emerald-500/90 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg animate-fade-in">
-                      <CheckCircle2 size={16} /> Part Completed
+                    <div className="absolute top-6 right-6 bg-emerald-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-xl animate-fade-in ring-1 ring-emerald-400/50">
+                      <CheckCircle2 size={16} /> Completed
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="text-slate-500 flex flex-col items-center">
-                  <AlertCircle size={48} className="mb-2 opacity-50" />
-                  <p>Video content unavailable.</p>
+                  <AlertCircle size={48} className="mb-3 opacity-20" />
+                  <p className="text-sm font-medium">Video content unavailable.</p>
                 </div>
               )}
             </div>
           ) : (
-            // PDF Viewer
-            <div className="flex flex-col h-full bg-slate-50 w-full">
-              <div className="p-6 border-b border-slate-200 bg-white">
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">Policy Document</h2>
-                <p className="text-slate-500">Please read the following policy carefully.</p>
-              </div>
-              <div className="flex-1 p-8 overflow-y-auto">
-                <div className="max-w-4xl mx-auto prose prose-slate prose-lg bg-white p-12 rounded-xl shadow-sm border border-slate-200 whitespace-pre-wrap">
+            // PDF Viewer (Scroll tracking implemented)
+            <div className="flex flex-col h-full bg-slate-50 w-full relative">
+              <div 
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 p-8 overflow-y-auto scroll-smooth"
+              >
+                <div className="max-w-3xl mx-auto prose prose-slate bg-white p-12 rounded-2xl shadow-sm border border-slate-200 whitespace-pre-wrap min-h-[150vh]">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-6 pb-4 border-b border-slate-100">Policy Document</h2>
                   {module.policyContent || "No content provided."}
                 </div>
               </div>
               
-              {!pdfConsented ? (
-                <div className="p-6 bg-white border-t border-slate-200 flex flex-col items-center justify-center shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-                  {consentError && <p className="text-red-500 text-sm mb-3">{consentError}</p>}
-                  <p className="text-sm text-slate-600 mb-4 text-center max-w-xl">
-                    By clicking the button below, I acknowledge that I have read and understood the policy outlined in this document.
-                  </p>
-                  <button 
-                    onClick={handlePdfConsent}
-                    className="btn-primary px-8 py-3 text-lg"
-                  >
-                    <ShieldCheck size={20} />
-                    I Read & Consent
-                  </button>
-                </div>
-              ) : (
-                <div className="p-6 bg-emerald-50 border-t border-emerald-100 flex items-center justify-center text-emerald-700 font-medium gap-2">
-                  <CheckCircle2 size={24} className="text-emerald-500" />
-                  Consent recorded successfully on {new Date(progress?.consentedAt).toLocaleString()}
-                </div>
-              )}
+              <div className="absolute bottom-0 inset-x-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex flex-col items-center justify-center shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)]">
+                {consentError && <p className="text-rose-500 text-sm mb-3 font-medium flex items-center gap-1.5"><AlertCircle size={14}/>{consentError}</p>}
+                
+                {!pdfConsented ? (
+                  <>
+                    <p className="text-xs font-medium text-slate-500 mb-4 text-center max-w-xl uppercase tracking-wider">
+                      {hasScrolledToBottom ? "You may now consent to this policy." : "Please scroll to the bottom of the document to consent."}
+                    </p>
+                    <button 
+                      onClick={handlePdfConsent}
+                      disabled={!hasScrolledToBottom}
+                      className={`px-8 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-sm ${
+                        hasScrolledToBottom 
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5' 
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      }`}
+                    >
+                      {hasScrolledToBottom ? <ShieldCheck size={20} /> : <Lock size={18} />}
+                      I Have Read & Consent
+                    </button>
+                  </>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-100 px-6 py-3 rounded-xl flex items-center justify-center text-emerald-700 font-semibold gap-2 shadow-sm">
+                    <CheckCircle2 size={20} className="text-emerald-500" />
+                    Consent Recorded
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* Playlist Sidebar */}
         {module.type === 'Video' && module.items?.length > 1 && (
-          <div className="w-full md:w-80 bg-slate-900 border-t md:border-t-0 md:border-l border-slate-700 flex flex-col shrink-0 overflow-hidden">
-            <div className="p-4 border-b border-slate-800 bg-slate-900/50">
-              <h3 className="text-white font-bold flex items-center gap-2">
-                <ListVideo size={18} className="text-indigo-400" /> Course Content
+          <div className="w-full md:w-80 bg-slate-900 border-t md:border-t-0 md:border-l border-white/10 flex flex-col shrink-0 overflow-hidden relative z-10 shadow-2xl">
+            <div className="p-5 border-b border-white/10 bg-slate-800/50">
+              <h3 className="text-white font-semibold flex items-center gap-2 tracking-tight">
+                <ListVideo size={18} className="text-indigo-400" /> Course Playlist
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                {progress?.completedItemIds?.length || 0} of {module.items.length} parts completed
+              <div className="mt-4 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div 
+                  className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${((progress?.completedItemIds?.length || 0) / module.items.length) * 100}%`}}
+                ></div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 font-medium tracking-widest uppercase">
+                {progress?.completedItemIds?.length || 0} / {module.items.length} parts completed
               </p>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
               {module.items.map((item, index) => {
                 const isItemComplete = progress?.completedItemIds?.includes(item.itemId);
                 const isActive = index === currentItemIndex;
@@ -303,18 +337,20 @@ export default function TrainingViewer() {
                   <button
                     key={item.itemId}
                     onClick={() => selectPlaylistItem(index)}
-                    className={`w-full text-left p-3 rounded-lg transition-colors flex items-start gap-3
-                      ${isActive ? 'bg-indigo-600/20 border border-indigo-500/30' : 'hover:bg-slate-800 border border-transparent'}
+                    className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 relative overflow-hidden group
+                      ${isActive ? 'bg-indigo-600/10 border-indigo-500/30 shadow-inner' : 'hover:bg-white/5 border-transparent'}
+                      border
                     `}
                   >
-                    <div className={`mt-0.5 shrink-0 ${isItemComplete ? 'text-emerald-400' : isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
+                    {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-full"></div>}
+                    <div className={`mt-0.5 shrink-0 transition-colors ${isItemComplete ? 'text-emerald-400' : isActive ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
                       {isItemComplete ? <CheckCircle2 size={16} /> : <PlayCircle size={16} />}
                     </div>
                     <div>
-                      <h4 className={`text-sm font-medium ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                      <h4 className={`text-sm font-medium tracking-tight ${isActive ? 'text-white' : 'text-slate-300'}`}>
                         {index + 1}. {item.title}
                       </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-[10px] text-slate-500 mt-1 font-medium tracking-wider uppercase">
                         {isItemComplete ? 'Completed' : isActive ? 'Now Playing' : 'Pending'}
                       </p>
                     </div>

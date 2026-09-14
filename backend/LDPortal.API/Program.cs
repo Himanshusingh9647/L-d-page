@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using LDPortal.API.Data;
@@ -49,6 +50,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddHostedService<RecurringTrainingService>();
+builder.Services.AddHostedService<DeadlineNotificationService>();
 
 // ── Controllers ──────────────────────────────────────────────────────────────
 builder.Services.AddControllers()
@@ -57,6 +59,17 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
+
+// ── File Upload Size Limits ──────────────────────────────────────────────────
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 524_288_000; // 500 MB
+});
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 524_288_000; // 500 MB
+});
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 var corsOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()
@@ -120,12 +133,18 @@ if (!Directory.Exists(mediaPath))
     Directory.CreateDirectory(mediaPath);
 }
 
+// Serve media files with proper MIME types
+var mimeProvider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+mimeProvider.Mappings[".mp4"] = "video/mp4";
+mimeProvider.Mappings[".webm"] = "video/webm";
+mimeProvider.Mappings[".pdf"] = "application/pdf";
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(mediaPath),
     RequestPath = "/media",
-    ServeUnknownFileTypes = true, // To support various media formats if needed
-    DefaultContentType = "application/octet-stream"
+    ContentTypeProvider = mimeProvider,
+    ServeUnknownFileTypes = false
 });
 
 app.UseCors("AllowFrontend");
@@ -141,6 +160,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("L&D Training Portal API started on {Urls}", string.Join(", ", app.Urls));
     logger.LogInformation("Swagger UI available at /swagger");
+    logger.LogInformation("Media library at: {Path}", mediaPath);
 });
 
 app.Run();

@@ -31,61 +31,60 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80')] bg-cover bg-center relative">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden font-sans">
+      {/* Premium Minimal Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-100 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-100 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
       
-      <div className="w-full max-w-md p-8 relative z-10">
-        <div className="glass-card p-10 relative overflow-hidden">
-          {/* Decorative gradients */}
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500 rounded-full mix-blend-multiply filter blur-2xl opacity-70 animate-blob"></div>
-          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-400 rounded-full mix-blend-multiply filter blur-2xl opacity-70 animate-blob animation-delay-2000"></div>
+      <div className="w-full max-w-[420px] p-6 relative z-10">
+        <div className="bg-white/80 backdrop-blur-xl p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
           
           <div className="relative">
-            <div className="flex flex-col items-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-cyan-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
-                <GraduationCap size={32} className="text-white" />
+            <div className="flex flex-col items-center mb-10">
+              <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-indigo-600/20">
+                <GraduationCap size={28} className="text-white" strokeWidth={2.5} />
               </div>
-              <h1 className="text-2xl font-bold text-slate-800 tracking-tight">L&D Portal</h1>
-              <p className="text-sm text-slate-500 mt-1 font-medium">Training Management System</p>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight">L&D Portal</h1>
+              <p className="text-sm text-slate-400 mt-1.5 font-semibold tracking-wide uppercase">Training Management</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg flex items-center gap-2">
-                <div className="w-1 h-full bg-red-500 rounded-full"></div>
+              <div className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium rounded-xl flex items-center gap-3 animate-fade-in">
+                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full shrink-0"></div>
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Email address</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-400" />
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email address</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-slate-400 font-medium"
-                    placeholder="Enter your email"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-slate-300 font-medium text-sm"
+                    placeholder="name@company.com"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-slate-400" />
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-slate-400 font-medium"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-slate-300 font-medium text-sm"
                     placeholder="••••••••"
                   />
                 </div>
@@ -94,14 +93,14 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98] mt-2"
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none transition-all mt-4"
               >
                 {isLoading ? (
                   <Loader2 className="animate-spin h-5 w-5" />
                 ) : (
                   <>
                     Sign In
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 ml-1" />
                   </>
                 )}
               </button>
@@ -109,11 +108,12 @@ export default function Login() {
           </div>
         </div>
         
-        <div className="mt-8 text-center">
-          <p className="text-sm text-slate-300 font-medium">
-            Demo Credentials (Password for all: Training@123)<br />
+        <div className="mt-8 text-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-white">
+          <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            <span className="font-bold text-slate-700 uppercase tracking-widest block mb-2">Demo Credentials</span>
             Admin: arjun.kapoor@company.com<br />
-            Employee: priya.sharma@company.com
+            Employee: priya.sharma@company.com<br />
+            <span className="text-slate-400 mt-1 block">Password: Training@123</span>
           </p>
         </div>
       </div>

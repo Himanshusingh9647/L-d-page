@@ -1,10 +1,10 @@
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using LDPortal.API.Data;
 using LDPortal.API.Models.DTOs;
-using LDPortal.API.Models.Entities;
-using LDPortal.API.Services;
 
 namespace LDPortal.API.Controllers;
 
@@ -25,34 +25,57 @@ public class ModulesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var modules = await _context.TrainingModules
-            .Include(m => m.Items)
-            .Where(m => m.IsActive)
-            .OrderBy(m => m.Title)
-            .Select(m => new ModuleDto
-            {
-                ModuleId = m.ModuleId,
-                Title = m.Title,
-                Type = m.Type,
-                Description = m.Description,
-                Duration = m.Duration,
-                DurationSeconds = m.DurationSeconds,
-                ContentUrl = m.ContentUrl,
-                PosterUrl = m.PosterUrl,
-                PolicyContent = m.PolicyContent,
-                IsActive = m.IsActive,
-                Items = m.Items.OrderBy(i => i.OrderIndex).Select(i => new ModuleItemDto
-                {
-                    ItemId = i.ItemId,
-                    Title = i.Title,
-                    ContentUrl = i.ContentUrl,
-                    OrderIndex = i.OrderIndex,
-                    DurationSeconds = i.DurationSeconds
-                }).ToList()
-            })
-            .ToListAsync();
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetAllModules";
+        command.CommandType = CommandType.StoredProcedure;
 
-        return Ok(ApiResponse<List<ModuleDto>>.Ok(modules));
+        using var reader = await command.ExecuteReaderAsync();
+        
+        var modulesDict = new Dictionary<int, ModuleDto>();
+        
+        // Result set 1: Modules
+        while (await reader.ReadAsync())
+        {
+            var module = new ModuleDto
+            {
+                ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                Title = reader.GetString(reader.GetOrdinal("Title")),
+                Type = reader.GetString(reader.GetOrdinal("Type")),
+                Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
+                Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
+                DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
+                ContentUrl = reader.IsDBNull(reader.GetOrdinal("ContentUrl")) ? null : reader.GetString(reader.GetOrdinal("ContentUrl")),
+                PosterUrl = reader.IsDBNull(reader.GetOrdinal("PosterUrl")) ? null : reader.GetString(reader.GetOrdinal("PosterUrl")),
+                PolicyContent = reader.IsDBNull(reader.GetOrdinal("PolicyContent")) ? null : reader.GetString(reader.GetOrdinal("PolicyContent")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
+                Items = new List<ModuleItemDto>()
+            };
+            modulesDict[module.ModuleId] = module;
+        }
+
+        // Result set 2: Module Items
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                var moduleId = reader.GetInt32(reader.GetOrdinal("ModuleId"));
+                if (modulesDict.TryGetValue(moduleId, out var module))
+                {
+                    module.Items.Add(new ModuleItemDto
+                    {
+                        ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
+                        Title = reader.GetString(reader.GetOrdinal("Title")),
+                        ContentUrl = reader.GetString(reader.GetOrdinal("ContentUrl")),
+                        OrderIndex = reader.GetInt32(reader.GetOrdinal("OrderIndex")),
+                        DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds"))
+                    });
+                }
+            }
+        }
+
+        return Ok(ApiResponse<List<ModuleDto>>.Ok(modulesDict.Values.ToList()));
     }
 
     /// <summary>
@@ -61,36 +84,56 @@ public class ModulesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var module = await _context.TrainingModules
-            .Include(m => m.Items)
-            .FirstOrDefaultAsync(m => m.ModuleId == id);
-            
-        if (module == null || !module.IsActive)
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetModuleById";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@ModuleId", id));
+
+        using var reader = await command.ExecuteReaderAsync();
+        
+        ModuleDto? module = null;
+        
+        // Result set 1: Module
+        if (await reader.ReadAsync())
+        {
+            module = new ModuleDto
+            {
+                ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
+                Title = reader.GetString(reader.GetOrdinal("Title")),
+                Type = reader.GetString(reader.GetOrdinal("Type")),
+                Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
+                Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
+                DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
+                ContentUrl = reader.IsDBNull(reader.GetOrdinal("ContentUrl")) ? null : reader.GetString(reader.GetOrdinal("ContentUrl")),
+                PosterUrl = reader.IsDBNull(reader.GetOrdinal("PosterUrl")) ? null : reader.GetString(reader.GetOrdinal("PosterUrl")),
+                PolicyContent = reader.IsDBNull(reader.GetOrdinal("PolicyContent")) ? null : reader.GetString(reader.GetOrdinal("PolicyContent")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
+                Items = new List<ModuleItemDto>()
+            };
+        }
+
+        if (module == null)
             return NotFound(ApiResponse.Fail("Module not found."));
 
-        var dto = new ModuleDto
+        // Result set 2: Module Items
+        if (await reader.NextResultAsync())
         {
-            ModuleId = module.ModuleId,
-            Title = module.Title,
-            Type = module.Type,
-            Description = module.Description,
-            Duration = module.Duration,
-            DurationSeconds = module.DurationSeconds,
-            ContentUrl = module.ContentUrl,
-            PosterUrl = module.PosterUrl,
-            PolicyContent = module.PolicyContent,
-            IsActive = module.IsActive,
-            Items = module.Items.OrderBy(i => i.OrderIndex).Select(i => new ModuleItemDto
+            while (await reader.ReadAsync())
             {
-                ItemId = i.ItemId,
-                Title = i.Title,
-                ContentUrl = i.ContentUrl,
-                OrderIndex = i.OrderIndex,
-                DurationSeconds = i.DurationSeconds
-            }).ToList()
-        };
+                module.Items.Add(new ModuleItemDto
+                {
+                    ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
+                    Title = reader.GetString(reader.GetOrdinal("Title")),
+                    ContentUrl = reader.GetString(reader.GetOrdinal("ContentUrl")),
+                    OrderIndex = reader.GetInt32(reader.GetOrdinal("OrderIndex")),
+                    DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds"))
+                });
+            }
+        }
 
-        return Ok(ApiResponse<ModuleDto>.Ok(dto));
+        return Ok(ApiResponse<ModuleDto>.Ok(module));
     }
 
     /// <summary>
@@ -106,51 +149,83 @@ public class ModulesController : ControllerBase
         if (request.Type != "Video" && request.Type != "PDF")
             return BadRequest(ApiResponse.Fail("Module type must be 'Video' or 'PDF'."));
 
-        var module = new TrainingModule
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var transaction = await connection.BeginTransactionAsync();
+        
+        try
         {
-            Title = request.Title,
-            Type = request.Type,
-            Description = request.Description,
-            Duration = request.Duration,
-            DurationSeconds = request.DurationSeconds,
-            ContentUrl = request.ContentUrl,
-            PosterUrl = request.PosterUrl,
-            PolicyContent = request.PolicyContent,
-            Items = request.Items.Select((req, index) => new TrainingModuleItem
-            {
-                Title = req.Title,
-                ContentUrl = req.ContentUrl,
-                DurationSeconds = req.DurationSeconds,
-                OrderIndex = index
-            }).ToList()
-        };
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "dbo.sp_CreateModule";
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@Title", request.Title));
+            command.Parameters.Add(new SqlParameter("@Type", request.Type));
+            command.Parameters.Add(new SqlParameter("@Description", (object?)request.Description ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@Duration", (object?)request.Duration ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@DurationSeconds", (object?)request.DurationSeconds ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@ContentUrl", (object?)request.ContentUrl ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@PosterUrl", (object?)request.PosterUrl ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@PolicyContent", (object?)request.PolicyContent ?? DBNull.Value));
 
-        _context.TrainingModules.Add(module);
-        await _context.SaveChangesAsync();
-
-        var userId = GetCurrentUserId();
-        return CreatedAtAction(nameof(GetById), new { id = module.ModuleId },
-            ApiResponse<ModuleDto>.Ok(new ModuleDto
+            int moduleId = 0;
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                ModuleId = module.ModuleId,
-                Title = module.Title,
-                Type = module.Type,
-                Description = module.Description,
-                Duration = module.Duration,
-                DurationSeconds = module.DurationSeconds,
-                ContentUrl = module.ContentUrl,
-                PosterUrl = module.PosterUrl,
-                PolicyContent = module.PolicyContent,
-                IsActive = module.IsActive,
-                Items = module.Items.Select(i => new ModuleItemDto
+                if (await reader.ReadAsync())
                 {
-                    ItemId = i.ItemId,
-                    Title = i.Title,
-                    ContentUrl = i.ContentUrl,
-                    OrderIndex = i.OrderIndex,
-                    DurationSeconds = i.DurationSeconds
+                    moduleId = Convert.ToInt32(reader["ModuleId"]);
+                }
+            }
+
+            if (moduleId > 0)
+            {
+                for (int i = 0; i < request.Items.Count; i++)
+                {
+                    var item = request.Items[i];
+                    using var itemCmd = connection.CreateCommand();
+                    itemCmd.Transaction = transaction;
+                    itemCmd.CommandText = "dbo.sp_CreateModuleItem";
+                    itemCmd.CommandType = CommandType.StoredProcedure;
+                    itemCmd.Parameters.Add(new SqlParameter("@ModuleId", moduleId));
+                    itemCmd.Parameters.Add(new SqlParameter("@Title", item.Title));
+                    itemCmd.Parameters.Add(new SqlParameter("@ContentUrl", item.ContentUrl));
+                    itemCmd.Parameters.Add(new SqlParameter("@OrderIndex", i));
+                    itemCmd.Parameters.Add(new SqlParameter("@DurationSeconds", (object?)item.DurationSeconds ?? DBNull.Value));
+                    await itemCmd.ExecuteNonQueryAsync();
+                }
+            }
+
+            await transaction.CommitAsync();
+
+            var dto = new ModuleDto
+            {
+                ModuleId = moduleId,
+                Title = request.Title,
+                Type = request.Type,
+                Description = request.Description,
+                Duration = request.Duration,
+                DurationSeconds = request.DurationSeconds,
+                ContentUrl = request.ContentUrl,
+                PosterUrl = request.PosterUrl,
+                PolicyContent = request.PolicyContent,
+                IsActive = true,
+                Items = request.Items.Select((req, index) => new ModuleItemDto
+                {
+                    ItemId = 0,
+                    Title = req.Title,
+                    ContentUrl = req.ContentUrl,
+                    OrderIndex = index,
+                    DurationSeconds = req.DurationSeconds
                 }).ToList()
-            }, "Module created successfully."));
+            };
+
+            return CreatedAtAction(nameof(GetById), new { id = moduleId }, ApiResponse<ModuleDto>.Ok(dto, "Module created successfully."));
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -163,42 +238,71 @@ public class ModulesController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ApiResponse.Fail("Invalid request data."));
 
-        var module = await _context.TrainingModules
-            .Include(m => m.Items)
-            .FirstOrDefaultAsync(m => m.ModuleId == id);
-            
-        if (module == null)
-            return NotFound(ApiResponse.Fail("Module not found."));
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var transaction = await connection.BeginTransactionAsync();
 
-        module.Title = request.Title;
-        module.Description = request.Description;
-        module.Duration = request.Duration;
-        module.DurationSeconds = request.DurationSeconds;
-        module.ContentUrl = request.ContentUrl;
-        module.PosterUrl = request.PosterUrl;
-        module.PolicyContent = request.PolicyContent;
-        module.IsActive = request.IsActive;
-        module.UpdatedAt = DateTime.UtcNow;
-
-        // Simple sync: remove old items, add new items (in a real app, you might want to merge them to keep progress)
-        _context.TrainingModuleItems.RemoveRange(module.Items);
-        module.Items = request.Items.Select((req, index) => new TrainingModuleItem
+        try
         {
-            Title = req.Title,
-            ContentUrl = req.ContentUrl,
-            DurationSeconds = req.DurationSeconds,
-            OrderIndex = index
-        }).ToList();
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "dbo.sp_UpdateModule";
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@ModuleId", id));
+            command.Parameters.Add(new SqlParameter("@Title", request.Title));
+            command.Parameters.Add(new SqlParameter("@Description", (object?)request.Description ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@Duration", (object?)request.Duration ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@DurationSeconds", (object?)request.DurationSeconds ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@ContentUrl", (object?)request.ContentUrl ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@PosterUrl", (object?)request.PosterUrl ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@PolicyContent", (object?)request.PolicyContent ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@IsActive", request.IsActive));
 
-        await _context.SaveChangesAsync();
+            int rowsAffected = 0;
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    rowsAffected = Convert.ToInt32(reader["RowsAffected"]);
+                }
+            }
 
-        var userId = GetCurrentUserId();
-        return Ok(ApiResponse.Ok("Module updated successfully."));
-    }
+            if (rowsAffected == 0)
+            {
+                return NotFound(ApiResponse.Fail("Module not found."));
+            }
 
-    private int GetCurrentUserId()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        return int.TryParse(claim, out int userId) ? userId : 0;
+            // Delete old items
+            using var delCmd = connection.CreateCommand();
+            delCmd.Transaction = transaction;
+            delCmd.CommandText = "dbo.sp_DeleteModuleItems";
+            delCmd.CommandType = CommandType.StoredProcedure;
+            delCmd.Parameters.Add(new SqlParameter("@ModuleId", id));
+            await delCmd.ExecuteNonQueryAsync();
+
+            // Insert new items
+            for (int i = 0; i < request.Items.Count; i++)
+            {
+                var item = request.Items[i];
+                using var itemCmd = connection.CreateCommand();
+                itemCmd.Transaction = transaction;
+                itemCmd.CommandText = "dbo.sp_CreateModuleItem";
+                itemCmd.CommandType = CommandType.StoredProcedure;
+                itemCmd.Parameters.Add(new SqlParameter("@ModuleId", id));
+                itemCmd.Parameters.Add(new SqlParameter("@Title", item.Title));
+                itemCmd.Parameters.Add(new SqlParameter("@ContentUrl", item.ContentUrl));
+                itemCmd.Parameters.Add(new SqlParameter("@OrderIndex", i));
+                itemCmd.Parameters.Add(new SqlParameter("@DurationSeconds", (object?)item.DurationSeconds ?? DBNull.Value));
+                await itemCmd.ExecuteNonQueryAsync();
+            }
+
+            await transaction.CommitAsync();
+            return Ok(ApiResponse.Ok("Module updated successfully."));
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

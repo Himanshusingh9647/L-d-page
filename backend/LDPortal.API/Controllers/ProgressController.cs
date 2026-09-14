@@ -1,10 +1,10 @@
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using LDPortal.API.Data;
 using LDPortal.API.Models.DTOs;
-using LDPortal.API.Models.Entities;
-using LDPortal.API.Services;
 
 namespace LDPortal.API.Controllers;
 
@@ -29,59 +29,31 @@ public class ProgressController : ControllerBase
             return BadRequest(ApiResponse.Fail("Invalid request data."));
 
         var userId = GetCurrentUserId();
-        
-        // Verify the user has this assignment
-        var hasAssignment = await _context.TrainingAssignments
-            .AnyAsync(a => a.UserId == userId && a.ModuleId == request.ModuleId && a.IsActive);
-        if (!hasAssignment)
-            return BadRequest(ApiResponse.Fail("You are not assigned to this training module."));
 
-        var progress = await _context.TrainingProgress
-            .Include(p => p.ItemProgresses)
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ModuleId == request.ModuleId);
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_UpsertVideoProgress";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", userId));
+        command.Parameters.Add(new SqlParameter("@ModuleId", request.ModuleId));
+        command.Parameters.Add(new SqlParameter("@ItemId", request.ItemId));
+        command.Parameters.Add(new SqlParameter("@ResumeTimeSeconds", request.ResumeTimeSeconds));
+        command.Parameters.Add(new SqlParameter("@MaxWatchedSeconds", request.MaxWatchedSeconds));
 
-        if (progress == null)
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            progress = new TrainingProgress
-            {
-                UserId = userId,
-                ModuleId = request.ModuleId,
-                Status = "InProgress",
-                ResumeTimeSeconds = 0,
-                MaxWatchedSeconds = 0,
-                VideoWatchedPercent = 0,
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.TrainingProgress.Add(progress);
-            await _context.SaveChangesAsync(); // Save to get ProgressId
-        }
-
-        if (progress.Status != "Completed")
-        {
-            progress.Status = "InProgress";
-            progress.UpdatedAt = DateTime.UtcNow;
+            var success = reader.GetInt32(reader.GetOrdinal("Success")) == 1;
+            var message = reader.GetString(reader.GetOrdinal("Message"));
             
-            var itemProgress = progress.ItemProgresses.FirstOrDefault(ip => ip.ItemId == request.ItemId);
-            if (itemProgress == null)
-            {
-                itemProgress = new TrainingItemProgress
-                {
-                    ProgressId = progress.ProgressId,
-                    ItemId = request.ItemId,
-                    ResumeTimeSeconds = request.ResumeTimeSeconds,
-                    MaxWatchedSeconds = request.MaxWatchedSeconds
-                };
-                _context.TrainingItemProgress.Add(itemProgress);
-            }
-            else if (!itemProgress.IsCompleted)
-            {
-                itemProgress.ResumeTimeSeconds = request.ResumeTimeSeconds;
-                itemProgress.MaxWatchedSeconds = Math.Max(itemProgress.MaxWatchedSeconds, request.MaxWatchedSeconds);
-            }
+            if (success)
+                return Ok(ApiResponse.Ok(message));
+            else
+                return BadRequest(ApiResponse.Fail(message));
         }
 
-        await _context.SaveChangesAsync();
-        return Ok(ApiResponse.Ok("Video progress saved."));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     /// <summary>
@@ -95,74 +67,28 @@ public class ProgressController : ControllerBase
 
         var userId = GetCurrentUserId();
 
-        // Verify assignment
-        var hasAssignment = await _context.TrainingAssignments
-            .AnyAsync(a => a.UserId == userId && a.ModuleId == request.ModuleId && a.IsActive);
-        if (!hasAssignment)
-            return BadRequest(ApiResponse.Fail("You are not assigned to this training module."));
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_CompleteVideoItem";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", userId));
+        command.Parameters.Add(new SqlParameter("@ModuleId", request.ModuleId));
+        command.Parameters.Add(new SqlParameter("@ItemId", request.ItemId));
 
-        // Verify module is a video
-        var module = await _context.TrainingModules
-            .Include(m => m.Items)
-            .FirstOrDefaultAsync(m => m.ModuleId == request.ModuleId);
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            var success = reader.GetInt32(reader.GetOrdinal("Success")) == 1;
+            var message = reader.GetString(reader.GetOrdinal("Message"));
             
-        if (module == null || module.Type != "Video")
-            return BadRequest(ApiResponse.Fail("Invalid video module."));
-
-        var progress = await _context.TrainingProgress
-            .Include(p => p.ItemProgresses)
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ModuleId == request.ModuleId);
-
-        var now = DateTime.UtcNow;
-
-        if (progress == null)
-        {
-            progress = new TrainingProgress
-            {
-                UserId = userId,
-                ModuleId = request.ModuleId,
-                Status = "InProgress",
-                CreatedAt = now
-            };
-            _context.TrainingProgress.Add(progress);
-            await _context.SaveChangesAsync(); // get ID
+            if (success)
+                return Ok(ApiResponse.Ok(message));
+            else
+                return BadRequest(ApiResponse.Fail(message));
         }
 
-        var itemProgress = progress.ItemProgresses.FirstOrDefault(ip => ip.ItemId == request.ItemId);
-        if (itemProgress == null)
-        {
-            itemProgress = new TrainingItemProgress
-            {
-                ProgressId = progress.ProgressId,
-                ItemId = request.ItemId,
-                IsCompleted = true
-            };
-            _context.TrainingItemProgress.Add(itemProgress);
-        }
-        else
-        {
-            itemProgress.IsCompleted = true;
-        }
-        
-        await _context.SaveChangesAsync();
-
-        // Check if all items in the module are now completed
-        var allItemIds = module.Items.Select(i => i.ItemId).ToList();
-        var completedItemIds = await _context.TrainingItemProgress
-            .Where(ip => ip.ProgressId == progress.ProgressId && ip.IsCompleted)
-            .Select(ip => ip.ItemId)
-            .ToListAsync();
-
-        if (allItemIds.All(id => completedItemIds.Contains(id)))
-        {
-            progress.Status = "Completed";
-            progress.CompletedAt = now;
-            progress.VideoWatchedPercent = 100;
-            progress.UpdatedAt = now;
-            await _context.SaveChangesAsync();
-        }
-
-        return Ok(ApiResponse.Ok($"Item marked as complete."));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     /// <summary>
@@ -176,45 +102,27 @@ public class ProgressController : ControllerBase
 
         var userId = GetCurrentUserId();
 
-        // Verify assignment
-        var hasAssignment = await _context.TrainingAssignments
-            .AnyAsync(a => a.UserId == userId && a.ModuleId == request.ModuleId && a.IsActive);
-        if (!hasAssignment)
-            return BadRequest(ApiResponse.Fail("You are not assigned to this training module."));
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_ConsentPdf";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", userId));
+        command.Parameters.Add(new SqlParameter("@ModuleId", request.ModuleId));
 
-        // Verify module is a PDF
-        var module = await _context.TrainingModules.FindAsync(request.ModuleId);
-        if (module == null || module.Type != "PDF")
-            return BadRequest(ApiResponse.Fail("Invalid PDF module."));
-
-        var progress = await _context.TrainingProgress
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ModuleId == request.ModuleId);
-
-        var now = DateTime.UtcNow;
-
-        if (progress == null)
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            progress = new TrainingProgress
-            {
-                UserId = userId,
-                ModuleId = request.ModuleId,
-                Status = "Completed",
-                ConsentedAt = now,
-                CompletedAt = now,
-                CreatedAt = now
-            };
-            _context.TrainingProgress.Add(progress);
-        }
-        else
-        {
-            progress.Status = "Completed";
-            progress.ConsentedAt = now;
-            progress.CompletedAt = now;
-            progress.UpdatedAt = now;
+            var success = reader.GetInt32(reader.GetOrdinal("Success")) == 1;
+            var message = reader.GetString(reader.GetOrdinal("Message"));
+            
+            if (success)
+                return Ok(ApiResponse.Ok(message));
+            else
+                return BadRequest(ApiResponse.Fail(message));
         }
 
-        await _context.SaveChangesAsync();
-        return Ok(ApiResponse.Ok($"Consent recorded for '{module.Title}'."));
+        return StatusCode(500, ApiResponse.Fail("Database error."));
     }
 
     private int GetCurrentUserId()

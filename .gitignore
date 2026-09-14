@@ -27,3 +27,7 @@ dist-ssr
 bin/
 obj/
 .vs/
+
+# Ignore large media files
+backend/LDPortal.API/MediaLibrary/*
+!backend/LDPortal.API/MediaLibrary/.gitkeep
