@@ -1,9 +1,10 @@
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import TopNavigation from './TopNavigation';
 import { useAuth } from '../../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import NotificationsDropdown from './NotificationsDropdown';
+import { CommandPalette } from '../ui/CommandPalette';
 
 export default function MainLayout({ requiredRole }) {
   const { isAuthenticated, user, loading } = useAuth();
@@ -27,10 +28,10 @@ export default function MainLayout({ requiredRole }) {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+      <div className="h-screen w-full flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-          <span className="text-slate-500 font-medium">Loading L&D Portal...</span>
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="text-text-secondary font-medium">Loading L&D Portal...</span>
         </div>
       </div>
     );
@@ -41,24 +42,26 @@ export default function MainLayout({ requiredRole }) {
   }
 
   if (requiredRole && user?.role !== requiredRole) {
-    // If Admin tries to go to employee route or vice versa
     return <Navigate to={user?.role === 'Admin' ? '/admin' : '/'} replace />;
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden text-text">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-end px-8 shrink-0 z-40 sticky top-0">
-          <NotificationsDropdown />
-        </header>
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <TopNavigation />
         
-        <main className="flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300">
-          <Outlet />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background transition-all duration-300">
+          <div className="mx-auto w-full max-w-[1440px]">
+            <Outlet />
+          </div>
         </main>
       </div>
+      
+      {/* Global Command Palette */}
+      <CommandPalette />
     </div>
   );
 }
+

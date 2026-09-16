@@ -1,64 +1,92 @@
 @import "tailwindcss";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/geist-sans/800.css";
 
 @theme {
-  --color-primary: #4F46E5;
-  --color-primary-hover: #4338CA;
-  --color-secondary: #0F172A;
-  --color-accent: #38BDF8;
-  --color-background: #F8FAFC;
-  --color-surface: #FFFFFF;
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: 'Geist Sans', system-ui, -apple-system, sans-serif;
+
   
-  --color-sidebar-bg: #09090b;
-  --color-sidebar-hover: #27272a;
-  --color-sidebar-text: #a1a1aa;
-  --color-sidebar-active: #ffffff;
-  
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 }
 
 @layer base {
+  :root {
+    --background: #F8FAFC;
+    --surface: #FFFFFF;
+    --surface-hover: #F1F5F9;
+    
+    --primary: #4F46E5; /* Indigo 600 */
+    --primary-light: #EEF2FF; /* Indigo 50 */
+    --secondary: #0F172A; /* Slate 900 */
+    
+    --border: #E2E8F0; /* Slate 200 */
+    
+    --text: #0F172A; /* Near Black / Slate 900 */
+    --text-secondary: #475569; /* Slate 600 (WCAG AA compliant against white) */
+    
+    --success: #10B981; /* Emerald 500 */
+    --warning: #F59E0B; /* Amber 500 */
+    --danger: #EF4444; /* Red 500 */
+    
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  }
+
   body {
-    @apply bg-[var(--color-background)] text-slate-700 font-sans antialiased m-0 p-0 min-h-screen;
+    @apply bg-background text-text font-sans antialiased m-0 p-0 min-h-screen;
     letter-spacing: -0.01em;
+  }
+
+  /* Global Focus Styles for Accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 }
 
-/* ── Layout Content ──────────────────────────────────────────────────────── */
-.layout-content {
-  @apply transition-all duration-300 ease-in-out min-h-screen bg-[#F8FAFC];
-  margin-left: 256px;
-}
-.layout-content--collapsed {
-  margin-left: 80px;
+/* ── Motion & Animation Tokens ───────────────────────────────────────────── */
+:root {
+  --transition-fast: 150ms;
+  --transition-base: 200ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.main-header {
-  @apply bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-30 px-8 py-4;
-}
-
-/* ── UI Elements ─────────────────────────────────────────────────────────── */
-.card {
-  @apply bg-white rounded-xl border border-slate-200/80 overflow-hidden;
-}
-
-.btn-primary {
-  @apply bg-indigo-600 text-white font-medium rounded-lg px-4 py-2 hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center gap-2 justify-center disabled:opacity-50 disabled:pointer-events-none;
-}
-
-.btn-secondary {
-  @apply bg-white text-slate-600 border border-slate-200 font-medium rounded-lg px-4 py-2 hover:bg-slate-50 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 flex items-center gap-2 justify-center disabled:opacity-50 disabled:pointer-events-none;
-}
-
-.input-field {
-  @apply w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-500 placeholder:text-slate-400;
-}
-
-.form-group {
-  @apply mb-4 relative;
-}
-
-.form-label {
-  @apply block text-sm font-medium text-slate-600 mb-1.5;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */
@@ -71,70 +99,4 @@
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-slate-200 rounded-full hover:bg-slate-300;
-}
-.sidebar ::-webkit-scrollbar-thumb {
-  @apply bg-slate-700 hover:bg-slate-600;
-}
-
-/* ── Animations ──────────────────────────────────────────────────────────── */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-slide-up {
-  animation: slideUp 0.35s ease-out forwards;
-}
-
-/* ── Glassmorphism ───────────────────────────────────────────────────────── */
-.glass-card {
-  @apply bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl rounded-2xl overflow-hidden;
-}
-
-/* ── Badges ──────────────────────────────────────────────────────────────── */
-.badge {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-.badge-success {
-  @apply bg-emerald-50 text-emerald-700 border border-emerald-100;
-}
-.badge-warning {
-  @apply bg-amber-50 text-amber-700 border border-amber-100;
-}
-.badge-error {
-  @apply bg-rose-50 text-rose-700 border border-rose-100;
-}
-.badge-info {
-  @apply bg-blue-50 text-blue-700 border border-blue-100;
-}
-.badge-neutral {
-  @apply bg-slate-50 text-slate-600 border border-slate-100;
-}
-
-/* ── Status Dots ─────────────────────────────────────────────────────────── */
-.status-dot {
-  @apply w-2 h-2 rounded-full;
-}
-.status-dot.success { @apply bg-emerald-500; }
-.status-dot.warning { @apply bg-amber-500; }
-.status-dot.error { @apply bg-rose-500; }
-.status-dot.info { @apply bg-blue-500; }
-.status-dot.neutral { @apply bg-slate-400; }
-
-/* ── Upload Zone ─────────────────────────────────────────────────────────── */
-.upload-zone {
-  @apply border-2 border-dashed border-slate-200 rounded-xl p-6 text-center transition-all duration-200 cursor-pointer;
-}
-.upload-zone:hover, .upload-zone.drag-over {
-  @apply border-indigo-400 bg-indigo-50/50;
-}
-.upload-zone.uploading {
-  @apply border-indigo-300 bg-indigo-50/30 cursor-default;
 }

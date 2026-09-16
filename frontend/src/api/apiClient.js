@@ -1,111 +1,102 @@
-import axios from 'axios';
+import {
+  mockUser,
+  mockAdminUser,
+  mockAssignments,
+  mockModules,
+  mockAdminDashboard,
+  mockMatrix,
+  mockEmployees
+} from './mockData';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5155';
+// Helper to simulate network delay
+const delay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
 
-const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor — attach JWT token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('ld_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor — handle 401 (expired/invalid token)
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('ld_token');
-      localStorage.removeItem('ld_user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default apiClient;
-
-// Helper to get the media base URL for constructing full URLs
-export const getMediaBaseUrl = () => API_BASE_URL;
+export const getMediaBaseUrl = () => 'http://localhost:5155';
 
 // ── Auth API ─────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (email, password) =>
-    apiClient.post('/auth/login', { email, password }),
-  getMe: () =>
-    apiClient.get('/auth/me'),
+  login: async (email, password) => {
+    await delay();
+    if (email.includes('admin')) return mockAdminUser;
+    return mockUser;
+  },
+  getMe: async () => {
+    await delay();
+    const userStr = localStorage.getItem('ld_user');
+    if (userStr) {
+      return { data: { data: JSON.parse(userStr) } };
+    }
+    return mockUser;
+  },
 };
 
 // ── Modules API ──────────────────────────────────────────────────────────────
 export const modulesApi = {
-  getAll: () => apiClient.get('/modules'),
-  getById: (id) => apiClient.get(`/modules/${id}`),
-  create: (data) => apiClient.post('/modules', data),
-  update: (id, data) => apiClient.put(`/modules/${id}`, data),
+  getAll: async () => { await delay(); return mockModules; },
+  getById: async (id) => { await delay(); return { data: { data: mockModules.data.data.find(m => m.moduleId == id) } }; },
+  create: async (data) => { await delay(); return { data: { message: "Mock Success" } }; },
+  update: async (id, data) => { await delay(); return { data: { message: "Mock Success" } }; },
 };
 
 // ── Assignments API ──────────────────────────────────────────────────────────
 export const assignmentsApi = {
-  getMy: () => apiClient.get('/assignments/my'),
-  getForUser: (userId) => apiClient.get(`/assignments/user/${userId}`),
-  getMatrix: () => apiClient.get('/assignments/matrix'),
-  create: (data) => apiClient.post('/assignments', data),
-  remove: (data) => apiClient.delete('/assignments', { data }),
+  getMy: async () => { await delay(); return mockAssignments; },
+  getForUser: async (userId) => { await delay(); return mockAssignments; },
+  getMatrix: async () => { await delay(); return mockMatrix; },
+  create: async (data) => { await delay(); return { data: { message: "Mock Success" } }; },
+  remove: async (data) => { await delay(); return { data: { message: "Mock Success" } }; },
 };
 
 // ── Progress API ─────────────────────────────────────────────────────────────
 export const progressApi = {
-  updateVideoTime: (data) => apiClient.put('/progress/video-time', data),
-  completeVideo: (data) => apiClient.put('/progress/complete-video', data),
-  consentPdf: (data) => apiClient.put('/progress/consent-pdf', data),
+  updateVideoTime: async (data) => { await delay(100); return { data: { message: "Mock Success" } }; },
+  completeVideo: async (data) => { await delay(); return { data: { message: "Mock Success" } }; },
+  consentPdf: async (data) => { await delay(); return { data: { message: "Mock Success" } }; },
 };
 
 // ── Admin API ────────────────────────────────────────────────────────────────
 export const adminApi = {
-  getDashboard: () => apiClient.get('/admin/dashboard'),
-  getEmployees: (search = '') => apiClient.get(`/admin/employees?search=${encodeURIComponent(search)}`),
-  getEmployeeDetail: (userId) => apiClient.get(`/admin/employee/${userId}`),
+  getDashboard: async () => { await delay(); return mockAdminDashboard; },
+  getEmployees: async (search = '') => { await delay(); return mockEmployees; },
+  getEmployeeDetail: async (userId) => { await delay(); return { data: { data: mockEmployees.data.data.find(u => u.userId == userId) } }; },
 };
 
 // ── Recurring API ────────────────────────────────────────────────────────────
 export const recurringApi = {
-  getAll: () => apiClient.get('/recurring'),
-  create: (data) => apiClient.post('/recurring', data),
-  update: (configId, data) => apiClient.put(`/recurring/${configId}`, data),
-  delete: (configId) => apiClient.delete(`/recurring/${configId}`),
+  getAll: async () => { await delay(); return { data: { data: [] } }; },
+  create: async (data) => { await delay(); return { data: { message: "Mock Success" } }; },
+  update: async (configId, data) => { await delay(); return { data: { message: "Mock Success" } }; },
+  delete: async (configId) => { await delay(); return { data: { message: "Mock Success" } }; },
 };
 
 // ── Media API ────────────────────────────────────────────────────────────────
 export const mediaApi = {
-  getAvailableFiles: () => apiClient.get('/media/available-files'),
-  upload: (file, onProgress) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return apiClient.post('/media/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percent);
+  getAvailableFiles: async () => { await delay(); return { data: { data: [] } }; },
+  upload: async (file, onProgress) => {
+    return new Promise((resolve) => {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        if (onProgress) onProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          resolve({ data: { message: "Mock Success", url: "/mock-url.mp4" } });
         }
-      },
+      }, 100);
     });
   },
 };
 
 // ── Notifications API ────────────────────────────────────────────────────────
 export const notificationsApi = {
-  getAll: () => apiClient.get('/notifications'),
-  markAsRead: (id) => apiClient.post(`/notifications/${id}/read`, {}),
+  getAll: async () => { await delay(); return { data: { data: [] } }; },
+  markAsRead: async (id) => { await delay(); return { data: { message: "Mock Success" } }; },
+};
+
+// Add a default export to prevent import errors in components expecting `import apiClient from ...`
+export default {
+  post: async () => { await delay(); return { data: {} }; },
+  get: async () => { await delay(); return { data: {} }; },
+  put: async () => { await delay(); return { data: {} }; },
+  delete: async () => { await delay(); return { data: {} }; },
 };

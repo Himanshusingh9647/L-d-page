@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { GraduationCap, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -37,9 +39,9 @@ export default function Login() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-100 rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
       
       <div className="w-full max-w-[420px] p-6 relative z-10">
-        <div className="bg-white/80 backdrop-blur-xl p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
-          
-          <div className="relative">
+        <Card variant="featured">
+          <CardContent className="p-10">
+            <div className="relative">
             <div className="flex flex-col items-center mb-10">
               <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-indigo-600/20">
                 <GraduationCap size={28} className="text-white" strokeWidth={2.5} />
@@ -90,10 +92,11 @@ export default function Login() {
                 </div>
               </div>
 
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none transition-all mt-4"
+                className="w-full mt-4"
+                size="lg"
               >
                 {isLoading ? (
                   <Loader2 className="animate-spin h-5 w-5" />
@@ -103,17 +106,18 @@ export default function Login() {
                     <ArrowRight className="h-4 w-4 ml-1" />
                   </>
                 )}
-              </button>
+              </Button>
             </form>
-          </div>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
         
-        <div className="mt-8 text-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-white">
-          <p className="text-xs text-slate-500 font-medium leading-relaxed">
-            <span className="font-bold text-slate-700 uppercase tracking-widest block mb-2">Demo Credentials</span>
+        <div className="mt-8 text-center bg-slate-50/50 backdrop-blur-sm p-4 rounded-2xl border border-border">
+          <p className="text-xs text-text-secondary font-medium leading-relaxed">
+            <span className="font-bold text-text uppercase tracking-widest block mb-2">Demo Credentials</span>
             Admin: arjun.kapoor@company.com<br />
             Employee: priya.sharma@company.com<br />
-            <span className="text-slate-400 mt-1 block">Password: Training@123</span>
+            <span className="text-text-secondary mt-1 block">Password: Training@123</span>
           </p>
         </div>
       </div>

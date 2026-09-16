@@ -11,14 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── Database ─────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.UseCompatibilityLevel(120); // SQL Server 2014
-            sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
-        }
-    ));
+    options.UseInMemoryDatabase("LDTrainingPortal"));
 
 // ── Authentication ───────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -116,6 +109,42 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+
+    if (!db.Users.Any())
+    {
+        var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
+        db.Users.Add(new LDPortal.API.Models.Entities.User
+        {
+            Email = "arjun.kapoor@company.com",
+            FullName = "Arjun Kapoor",
+            PasswordHash = authService.HashPassword("Training@123"),
+            EmployeeCode = "EMP001",
+            Department = "HR",
+            Role = "Admin",
+            Initials = "AK",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        db.Users.Add(new LDPortal.API.Models.Entities.User
+        {
+            Email = "priya.sharma@company.com",
+            FullName = "Priya Sharma",
+            PasswordHash = authService.HashPassword("Training@123"),
+            EmployeeCode = "EMP002",
+            Department = "Engineering",
+            Role = "Employee",
+            Initials = "PS",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        db.SaveChanges();
+    }
+}
 
 // ── Middleware Pipeline ──────────────────────────────────────────────────────
 app.UseMiddleware<ExceptionMiddleware>();
