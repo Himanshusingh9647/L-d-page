@@ -17,7 +17,7 @@ export const getMediaBaseUrl = () => 'http://localhost:5155';
 export const authApi = {
   login: async (email, password) => {
     await delay();
-    if (email.includes('admin')) return mockAdminUser;
+    if (email.includes('admin') || email === 'arjun.kapoor@company.com') return mockAdminUser;
     return mockUser;
   },
   getMe: async () => {

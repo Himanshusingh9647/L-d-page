@@ -4,9 +4,10 @@ import { ToastProvider } from './context/ToastContext';
 import MainLayout from './components/layout/MainLayout';
 import Login from './pages/auth/Login';
 
-// Employee Pages (Placeholders for now)
+// Employee Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import TrainingViewer from './pages/employee/TrainingViewer';
+import Courses from './pages/employee/Courses';
 
 // Admin Pages (Placeholders for now)
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -26,6 +27,7 @@ function App() {
             {/* Employee Routes */}
             <Route element={<MainLayout requiredRole="Employee" />}>
               <Route path="/" element={<EmployeeDashboard />} />
+              <Route path="/courses" element={<Courses />} />
               <Route path="/training/:moduleId" element={<TrainingViewer />} />
             </Route>
 

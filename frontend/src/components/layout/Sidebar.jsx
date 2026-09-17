@@ -20,7 +20,7 @@ const employeeLinks = [
 ];
 
 export default function Sidebar({ collapsed, setCollapsed }) {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, logout, user } = useAuth();
   const links = isAdmin ? adminLinks : employeeLinks;
 
   return (
@@ -40,7 +40,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             "font-bold text-lg text-text whitespace-nowrap transition-opacity duration-200 ease-in-out",
             collapsed ? "opacity-0 invisible" : "opacity-100 visible"
           )}>
-            Acme L&D
+            L&D
           </span>
         </div>
       </div>
@@ -56,7 +56,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               "flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ease-in-out group relative overflow-hidden",
               isActive 
                 ? "text-primary font-semibold bg-primary/5" 
-                : "text-text-secondary hover:bg-slate-50 hover:text-text font-medium"
+                : "text-text-secondary hover:bg-surface-hover hover:text-text font-medium"
             )}
           >
             {({ isActive }) => (
@@ -95,15 +95,15 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       </nav>
 
       {/* Rich Profile & Settings */}
-      <div className="p-4 border-t border-slate-200/50 mt-auto shrink-0 bg-slate-50/30">
+      <div className="p-4 border-t border-border mt-auto shrink-0 bg-background/50">
         <div className={cn("overflow-hidden transition-all duration-300", collapsed ? "h-0 opacity-0" : "h-auto opacity-100 mb-4")}>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
-              AK
+            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+              {user?.initials || '??'}
             </div>
             <div>
-              <p className="text-sm font-semibold text-text leading-tight">Arjun Kumar</p>
-              <p className="text-xs text-text-secondary">Engineering Dept</p>
+              <p className="text-sm font-semibold text-text leading-tight">{user?.fullName || 'User'}</p>
+              <p className="text-xs text-text-secondary">{user?.department || 'Department'}</p>
             </div>
           </div>
           
@@ -112,7 +112,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               <span className="text-[11px] font-medium text-text-secondary uppercase tracking-wider">Goal Progress</span>
               <span className="text-xs font-bold text-text">68%</span>
             </div>
-            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface-hover rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full w-[68%]" />
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         <div className={cn("flex items-center", collapsed ? "flex-col gap-2" : "justify-between")}>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg text-text-secondary hover:bg-slate-200/50 hover:text-text transition-colors group relative"
+            className="p-2 rounded-lg text-text-secondary hover:bg-surface-hover hover:text-text transition-colors group relative"
           >
             {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             {collapsed && (
@@ -133,7 +133,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           </button>
           
           <div className={cn("flex items-center", collapsed ? "flex-col gap-2" : "gap-1")}>
-            <button className="p-2 rounded-lg text-text-secondary hover:bg-slate-200/50 hover:text-text transition-colors group relative">
+            <button className="p-2 rounded-lg text-text-secondary hover:bg-surface-hover hover:text-text transition-colors group relative">
               <LayoutDashboard size={18} />
               {collapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-secondary text-white text-xs font-medium rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap">
@@ -143,7 +143,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             </button>
             <button 
               onClick={logout}
-              className="p-2 rounded-lg text-text-secondary hover:bg-rose-50 hover:text-danger transition-colors group relative"
+              className="p-2 rounded-lg text-text-secondary hover:bg-danger/10 hover:text-danger transition-colors group relative"
             >
               <LogOut size={18} />
               {collapsed && (

@@ -41,6 +41,8 @@ export const mockAssignments = {
         moduleType: "Video",
         moduleDescription: "Annual required compliance training regarding workplace ethics and conduct.",
         duration: "15 mins",
+        category: "Compliance",
+        department: "All",
         isRequired: true,
         dueDate: new Date(Date.now() - 2 * 86400000).toISOString(),
         status: "NotStarted"
@@ -51,6 +53,8 @@ export const mockAssignments = {
         moduleType: "Video",
         moduleDescription: "Learn how to protect company assets and avoid phishing attacks.",
         duration: "20 mins",
+        category: "Technical",
+        department: "Engineering",
         isRequired: true,
         dueDate: new Date(Date.now() + 3 * 86400000).toISOString(),
         status: "InProgress",
@@ -62,6 +66,8 @@ export const mockAssignments = {
         moduleType: "Document",
         moduleDescription: "Core leadership values for prospective managers.",
         duration: "30 mins",
+        category: "Leadership",
+        department: "HR",
         isRequired: false,
         dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
         status: "NotStarted"
@@ -72,6 +78,8 @@ export const mockAssignments = {
         moduleType: "Video",
         moduleDescription: "General office safety guidelines.",
         duration: "10 mins",
+        category: "Compliance",
+        department: "All",
         isRequired: true,
         dueDate: new Date(Date.now() - 10 * 86400000).toISOString(),
         status: "Completed",
@@ -91,9 +99,19 @@ export const mockAdminDashboard = {
   data: {
     data: {
       totalEmployees: 145,
+      compliantEmployees: 113,
       activeModules: 12,
       overallCompletionRate: 78,
-      overdueAssignments: 23,
+      overdueAssignments: 12,
+      completedToday: 15,
+      pendingTrainings: 42,
+      departmentCompliance: [
+        { name: 'Engineering', rate: 85 },
+        { name: 'Sales', rate: 72 },
+        { name: 'HR', rate: 95 },
+        { name: 'Marketing', rate: 68 },
+        { name: 'Finance', rate: 90 }
+      ],
       recentActivity: [
         { id: 1, user: "John Doe", action: "Completed Workplace Safety", time: "2 mins ago" },
         { id: 2, user: "Jane Smith", action: "Started Code of Conduct", time: "1 hour ago" }

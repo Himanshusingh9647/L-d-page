@@ -60,31 +60,24 @@ const SmallStatCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
 );
 
 export default function KPICards({ trainings = [] }) {
-  const completedCount = trainings.filter(t => t.status === 'Completed').length;
-  const totalCount = trainings.length;
+  const total = trainings.length;
+  const completed = trainings.filter(t => t.status === 'Completed').length;
+  const inProgress = trainings.filter(t => t.status === 'InProgress').length;
+  const overdue = trainings.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'Completed').length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <LargeStatCard 
-        title="Assigned Courses" 
-        value={totalCount} 
-        icon={BookOpen} 
-        trend="up" 
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <LargeStatCard
+        title="Assigned Courses"
+        value={total}
+        icon={BookOpen}
+        trend="up"
         trendValue={12}
         subtitle="You are ahead of 82% of your department"
       />
-      <SmallStatCard 
-        title="Hours Learned" 
-        value={`${mockAnalytics.hoursLearned}h`} 
-        icon={Clock} 
-        subtitle="Top 10% this week"
-      />
-      <SmallStatCard 
-        title="Learning Streak" 
-        value={`${mockAnalytics.learningStreak}d`} 
-        icon={Target} 
-        subtitle="Keep it up!"
-      />
+      <SmallStatCard title="Completed" value={completed} icon={CheckCircle2} subtitle="This month" />
+      <SmallStatCard title="In Progress" value={inProgress} icon={Clock} subtitle="Keep going" />
+      <SmallStatCard title="Overdue" value={overdue} icon={Target} subtitle="Needs attention" />
     </div>
   );
 }

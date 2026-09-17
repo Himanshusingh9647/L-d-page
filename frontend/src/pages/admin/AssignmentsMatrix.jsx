@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { assignmentsApi } from '../../api/apiClient';
 import { Save, Loader2, CheckSquare, Square, XCircle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { Card, CardContent } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
 
 export default function AssignmentsMatrix() {
   const [data, setData] = useState({ employees: [], modules: [], assignments: [] });
@@ -100,67 +103,67 @@ export default function AssignmentsMatrix() {
 
   const hasChanges = Object.keys(changes).length > 0;
 
-  if (loading) return <div className="p-8 flex items-center justify-center text-slate-400 h-64">Loading Assignment Matrix...</div>;
+  if (loading) return <div className="p-8 flex items-center justify-center text-text-secondary h-64">Loading Assignment Matrix...</div>;
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto">
-      <div className="main-header -mx-8 -mt-8 mb-8 px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
+    <div className="p-6 lg:p-8 max-w-[1440px] mx-auto space-y-8 flex flex-col min-h-[calc(100vh-64px)]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Training Assignment Matrix</h1>
-          <p className="text-sm text-slate-500 mt-1">Select which training modules each employee needs to complete.</p>
+          <h1 className="text-2xl font-bold text-text tracking-tight">Assignment Matrix</h1>
+          <p className="text-sm text-text-secondary mt-1">Assign and manage mandatory training per department or role.</p>
         </div>
         
         {hasChanges && (
-          <div className="flex gap-3 items-center animate-fade-in bg-indigo-50/50 px-4 py-2 rounded-xl border border-indigo-100/50 shadow-sm">
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 mr-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+          <div className="flex gap-3 items-center animate-fade-in bg-warning/10 px-4 py-2 rounded-xl border border-warning/20 shadow-sm">
+            <span className="text-xs font-bold uppercase tracking-wider text-warning mr-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
               Unsaved changes
             </span>
-            <div className="flex items-center gap-2 mr-2 border-r border-indigo-200/50 pr-4">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Due Date:</label>
+            <div className="flex items-center gap-2 mr-2 border-r border-warning/20 pr-4">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">Due Date:</label>
               <input 
                 type="date" 
                 value={globalDueDate}
                 onChange={(e) => setGlobalDueDate(e.target.value)}
-                className="text-sm bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="text-sm bg-surface border border-border rounded-lg px-2 py-1 outline-none focus:border-primary focus:ring-1 focus:ring-primary text-text"
               />
             </div>
-            <button onClick={discardChanges} className="text-slate-500 hover:text-slate-700 font-semibold text-sm px-3 py-1.5 rounded-lg hover:bg-white transition-colors">
+            <button onClick={discardChanges} className="text-text-secondary hover:text-text font-semibold text-sm px-3 py-1.5 rounded-lg hover:bg-surface-hover transition-colors">
               Discard
             </button>
-            <button 
+            <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="btn-primary py-1.5 px-4 text-sm"
+              size="sm"
             >
-              {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
+              {saving ? <Loader2 size={16} className="animate-spin mr-2 inline" /> : <Save size={16} className="mr-2 inline" />}
               Save Assignments
-            </button>
+            </Button>
           </div>
         )}
       </div>
-
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden overflow-x-auto relative z-10">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr>
-              <th className="p-4 bg-slate-50/80 backdrop-blur-md border-b border-slate-100 border-r min-w-[220px] sticky left-0 z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)]">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Employee</span>
-              </th>
-              {data.modules.map(module => (
-                <th key={module.moduleId} className="p-4 bg-slate-50/80 backdrop-blur-md border-b border-slate-100 min-w-[160px] text-center">
-                  <div className="text-sm font-bold text-slate-700 truncate tracking-tight" title={module.title}>{module.title}</div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 bg-white inline-block px-2 py-0.5 rounded shadow-sm border border-slate-100">{module.type}</div>
+      <Card className="flex-1 flex flex-col min-h-0 relative z-10">
+        <div className="overflow-auto flex-1">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="p-4 bg-surface-hover backdrop-blur-md border-b border-border border-r min-w-[220px] sticky left-0 z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)]">
+                  <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Employee</span>
                 </th>
-              ))}
+                {data.modules.map(module => (
+                  <th key={module.moduleId} className="p-4 bg-surface-hover backdrop-blur-md border-b border-border min-w-[160px] text-center">
+                    <div className="text-sm font-bold text-text truncate tracking-tight" title={module.title}>{module.title}</div>
+                    <Badge variant="default" className="mt-1.5">{module.type}</Badge>
+                  </th>
+                ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {data.employees.map(employee => (
-              <tr key={employee.userId} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="p-4 border-r border-slate-100 sticky left-0 bg-white z-10 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.02)] group-hover:bg-slate-50/50 transition-colors">
-                  <div className="font-semibold text-slate-800 text-sm">{employee.fullName}</div>
-                  <div className="text-xs font-medium text-slate-400 mt-0.5">{employee.department}</div>
+              <tr key={employee.userId} className="hover:bg-slate-50 transition-colors group">
+                <td className="p-4 border-r border-border sticky left-0 bg-surface z-10 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.02)] group-hover:bg-slate-50 transition-colors">
+                  <div className="font-semibold text-text text-sm">{employee.fullName}</div>
+                  <div className="text-xs font-medium text-text-secondary mt-0.5">{employee.department}</div>
                 </td>
                 {data.modules.map(module => {
                   const assigned = isAssigned(employee.userId, module.moduleId);
@@ -171,28 +174,28 @@ export default function AssignmentsMatrix() {
                     <td key={module.moduleId} className="p-4 text-center">
                       <button
                         onClick={() => toggleAssignment(employee.userId, module.moduleId)}
-                        className={`inline-flex flex-col items-center justify-center p-3 rounded-xl transition-all w-24 h-20 ${
-                          isChanged ? 'bg-indigo-50 border border-indigo-100 shadow-inner' : 'hover:bg-slate-50 hover:shadow-sm border border-transparent'
+                        className={`inline-flex flex-col items-center justify-center p-3 rounded-xl transition-all w-24 h-20 outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isChanged ? 'bg-primary-light border border-primary/20 shadow-inner' : 'hover:bg-surface-hover hover:shadow-sm border border-transparent'
                         }`}
                         title={assigned ? 'Click to unassign' : 'Click to assign'}
                       >
                         {assigned ? (
-                          <div className={`flex items-center justify-center w-6 h-6 rounded ${isChanged ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-800 text-white shadow-sm'}`}>
+                          <div className={`flex items-center justify-center w-6 h-6 rounded ${isChanged ? 'bg-primary text-white shadow-md' : 'bg-slate-800 text-white shadow-sm'}`}>
                             <CheckSquare size={14} strokeWidth={3} />
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center w-6 h-6 rounded border-2 border-slate-200 text-transparent">
+                          <div className="flex items-center justify-center w-6 h-6 rounded border-2 border-border text-transparent">
                             <Square size={14} />
                           </div>
                         )}
                         
                         {assigned && status && (
-                          <span className={`text-[9px] font-bold uppercase tracking-widest mt-2 px-1.5 py-0.5 rounded ${
-                            status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
-                            status === 'InProgress' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
-                          }`}>
+                          <Badge 
+                            variant={status === 'Completed' ? 'success' : status === 'InProgress' ? 'warning' : 'secondary'} 
+                            className="mt-2 text-[9px] px-1.5 py-0.5"
+                          >
                             {status}
-                          </span>
+                          </Badge>
                         )}
                       </button>
                     </td>
@@ -202,7 +205,8 @@ export default function AssignmentsMatrix() {
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }

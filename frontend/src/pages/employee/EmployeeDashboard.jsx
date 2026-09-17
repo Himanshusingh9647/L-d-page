@@ -3,11 +3,9 @@ import { assignmentsApi } from '../../api/apiClient';
 import { mockAnalytics } from '../../mock/analytics';
 import HeroSection from '../../components/dashboard/HeroSection';
 import KPICards from '../../components/dashboard/KPICards';
-import LearningProgress from '../../components/dashboard/LearningProgress';
-import { ActivityChart, DistributionChart } from '../../components/dashboard/ChartsSection';
+import { DistributionChart } from '../../components/dashboard/ChartsSection';
 import AssignedCourses from '../../components/dashboard/AssignedCourses';
 import UpcomingDeadlines from '../../components/dashboard/UpcomingDeadlines';
-import Certificates from '../../components/dashboard/Certificates';
 import RecentActivity from '../../components/dashboard/RecentActivity';
 import { Skeleton } from '../../components/ui/Skeleton';
 
@@ -67,45 +65,32 @@ export default function EmployeeDashboard() {
           <KPICards trainings={trainings} />
         </div>
 
-        {/* Soft Divider */}
-        <div className="w-full h-px bg-slate-200/50 mb-12" />
-
-        {/* Analytics Section (Chart + Progress) */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-16">
-          <div className="xl:col-span-2">
-            <ActivityChart />
-          </div>
-          <div>
-            <LearningProgress />
-          </div>
-        </div>
       </div>
 
-      {/* Subtle Background Change for Tables/Lists */}
-      <div className="bg-slate-50/50 border-t border-slate-200/50 py-16">
-        <div className="px-6 lg:px-8 max-w-[1440px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {/* Subtle Background Change for Tables/Lists */}
+    <div className="bg-slate-50/50 border-t border-slate-200/50 py-16">
+      <div className="px-6 lg:px-8 max-w-[1440px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Left Column (Wider) */}
+          <div className="lg:col-span-2 space-y-8">
+            <AssignedCourses trainings={trainings} />
             
-            {/* Left Column (Wider) */}
-            <div className="lg:col-span-2 space-y-8">
-              <AssignedCourses trainings={trainings} />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                <Certificates />
-                <DistributionChart />
-              </div>
+            <div className="mt-8">
+              <DistributionChart />
             </div>
-            
-            {/* Right Column (Narrower) */}
-            <div className="space-y-8">
-              <UpcomingDeadlines trainings={trainings} />
-              <RecentActivity />
-            </div>
-
           </div>
+          
+          {/* Right Column (Narrower) */}
+          <div className="space-y-8">
+            <UpcomingDeadlines trainings={trainings} />
+            <RecentActivity />
+          </div>
+
         </div>
       </div>
     </div>
+  </div>
   );
 }
 

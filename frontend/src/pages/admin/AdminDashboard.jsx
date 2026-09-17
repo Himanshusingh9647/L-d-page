@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../../api/apiClient';
-import { Users, CheckCircle, Clock, AlertTriangle, Activity } from 'lucide-react';
-import { Card, CardContent } from '../../components/ui/Card';
+import { Users, CheckCircle, Clock, AlertTriangle, Activity, ArrowRight, BarChart3 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -29,95 +30,153 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const StatCard = ({ title, value, icon: Icon, colorClass, subtitle, textColor }) => (
-    <Card className="flex flex-col justify-between group h-full">
-      <CardContent className="p-7 flex-1 flex flex-col relative z-10">
-        <div className="flex justify-between items-start mb-6">
-          <div className={`p-3.5 rounded-2xl ${colorClass} text-white shadow-md group-hover:scale-105 transition-transform duration-150 ease-out`}>
-            <Icon size={24} strokeWidth={2} />
-          </div>
-          {subtitle && (
-            <Badge variant="default" className="text-xs">{subtitle}</Badge>
-          )}
-        </div>
-        <div className="mt-auto">
-          <p className="text-sm font-bold tracking-wide text-text-secondary uppercase mb-1">{title}</p>
-          <h3 className={`text-4xl font-black tracking-tighter ${textColor}`}>{value}</h3>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const hasOverdue = stats?.overdueAssignments > 0;
+  const overdueColor = hasOverdue ? 'text-danger' : 'text-success';
+  const overdueBorder = hasOverdue ? 'border-danger/20 hover:border-danger/40' : 'border-border hover:border-success/40';
+
+  const complianceRate = stats?.overallCompletionRate || 0;
+  const complianceStatus = complianceRate >= 90 ? 'success' : complianceRate >= 75 ? 'warning' : 'danger';
+  const complianceStatusText = complianceRate >= 90 ? 'On Track' : complianceRate >= 75 ? 'Needs Attention' : 'Critical';
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-10">
-        <h1 className="text-3xl font-extrabold text-text tracking-tight">Overview</h1>
-        <p className="text-text-secondary mt-2 text-sm font-medium">Compliance and training activity across the organization.</p>
+    <div className="p-6 lg:p-8 max-w-[1440px] mx-auto flex flex-col min-h-[calc(100vh-64px)] space-y-8">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold text-text tracking-tight">Overview</h1>
+        <p className="text-sm text-text-secondary mt-1">Compliance and training activity across the organization.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard
-          title="Overall Compliance"
-          value={`${stats?.complianceRate || 0}%`}
-          icon={Activity}
-          colorClass="bg-indigo-500"
-          textColor="text-indigo-600"
-          subtitle={`${stats?.compliantEmployees} / ${stats?.totalEmployees} OK`}
-        />
-        <StatCard
-          title="Pending Trainings"
-          value={stats?.pendingTrainings || 0}
-          icon={Clock}
-          colorClass="bg-amber-500"
-          textColor="text-amber-600"
-        />
-        <StatCard
-          title="Overdue Trainings"
-          value={stats?.overdueTrainings || 0}
-          icon={AlertTriangle}
-          colorClass="bg-rose-500"
-          textColor="text-rose-600"
-          subtitle="Action Req."
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card variant="featured">
-          <CardContent className="p-8 flex items-center justify-between h-full">
-            <div>
-              <h3 className="text-sm font-bold tracking-wide text-text-secondary uppercase mb-3 flex items-center gap-2">
-                <CheckCircle size={16} className="text-emerald-500" />
-                Completed Today
-              </h3>
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black tracking-tighter text-text">{stats?.completedToday || 0}</span>
-                <span className="text-text-secondary font-medium">modules</span>
+      {/* Primary KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Compliance Hero */}
+        <Card className="group cursor-pointer hover:shadow-md hover:border-primary/30 transition-all">
+          <CardContent className="p-8 h-full flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-8">
+              <div className="flex items-center gap-3 text-text-secondary font-semibold uppercase tracking-wider text-sm">
+                <Activity size={20} className="text-primary" />
+                Overall Compliance
               </div>
+              <Badge variant={complianceStatus}>{complianceStatusText}</Badge>
             </div>
-            <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center opacity-70">
-              <CheckCircle className="text-emerald-500 w-12 h-12" />
+            <div className="flex items-end justify-between mt-auto">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-6xl font-black tracking-tighter text-text">{complianceRate}%</h2>
+                </div>
+                <p className="text-text-secondary mt-2 font-medium">
+                  <strong className="text-text">{stats?.compliantEmployees || 0}</strong> of <strong className="text-text">{stats?.totalEmployees || 0}</strong> employees compliant
+                </p>
+              </div>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-sm font-semibold text-primary pb-2">
+                View list <ArrowRight size={16} className="ml-1" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        
-        <Card variant="featured">
-          <CardContent className="p-8 flex items-center justify-between h-full">
-            <div>
-              <h3 className="text-sm font-bold tracking-wide text-text-secondary uppercase mb-3 flex items-center gap-2">
-                <Users size={16} className="text-blue-500" />
-                Total Workforce
-              </h3>
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black tracking-tighter text-text">{stats?.totalEmployees || 0}</span>
-                <span className="text-text-secondary font-medium">active</span>
+
+        {/* Dynamic Overdue */}
+        <Card className={`group cursor-pointer hover:shadow-md transition-all ${overdueBorder}`}>
+          <CardContent className="p-8 h-full flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-8">
+              <div className="flex items-center gap-3 text-text-secondary font-semibold uppercase tracking-wider text-sm">
+                <AlertTriangle size={20} className={overdueColor} />
+                Overdue Trainings
               </div>
+              {hasOverdue ? (
+                <Badge variant="danger">Action Req.</Badge>
+              ) : (
+                <Badge variant="success">All Clear</Badge>
+              )}
             </div>
-            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center opacity-70">
-              <Users className="text-blue-500 w-12 h-12" />
+            <div className="flex items-end justify-between mt-auto">
+              <div>
+                <h2 className={`text-6xl font-black tracking-tighter ${hasOverdue ? 'text-text' : 'text-text-secondary'}`}>
+                  {stats?.overdueAssignments || 0}
+                </h2>
+              </div>
+              <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-sm font-semibold pb-2 ${overdueColor}`}>
+                View list <ArrowRight size={16} className="ml-1" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Secondary KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="hover:shadow-sm transition-all border-border/50 hover:border-border">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-surface-hover rounded-xl text-text-secondary">
+              <Clock size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Pending Trainings</p>
+              <p className="text-2xl font-bold text-text">{stats?.pendingTrainings || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-sm transition-all border-border/50 hover:border-border">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-surface-hover rounded-xl text-text-secondary">
+              <CheckCircle size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Completed Today</p>
+              <p className="text-2xl font-bold text-text">{stats?.completedToday || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-sm transition-all border-border/50 hover:border-border">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-surface-hover rounded-xl text-text-secondary">
+              <Users size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Total Workforce</p>
+              <p className="text-2xl font-bold text-text">{stats?.totalEmployees || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Department Breakdown Chart */}
+      {stats?.departmentCompliance && (
+        <Card className="flex-1 flex flex-col min-h-[320px]">
+          <CardHeader className="p-6 pb-2 border-b-0 flex flex-row items-center gap-2 shrink-0">
+             <BarChart3 size={18} className="text-text-secondary" />
+             <CardTitle className="text-base text-text-secondary uppercase tracking-wider font-semibold">Department Compliance Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.departmentCompliance} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'var(--text-secondary)', fontSize: 12, fontWeight: 500 }} 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'var(--text-secondary)', fontSize: 12, fontWeight: 500 }} 
+                  domain={[0, 100]}
+                  tickFormatter={(val) => `${val}%`}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'var(--surface-hover)', opacity: 0.5 }}
+                  contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ color: 'var(--text)', fontWeight: 600 }}
+                  formatter={(value) => [`${value}%`, 'Compliance']}
+                />
+                <Bar dataKey="rate" fill="var(--primary)" radius={[4, 4, 0, 0]} maxBarSize={60} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
