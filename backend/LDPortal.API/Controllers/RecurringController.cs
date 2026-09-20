@@ -42,7 +42,9 @@ public class RecurringController : ControllerBase
                 ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
                 ModuleTitle = reader.GetString(reader.GetOrdinal("ModuleTitle")),
                 ModuleType = reader.GetString(reader.GetOrdinal("ModuleType")),
+                Category = HasColumn(reader, "Category") && !reader.IsDBNull(reader.GetOrdinal("Category")) ? reader.GetString(reader.GetOrdinal("Category")) : "HR",
                 RecurrenceIntervalDays = reader.GetInt32(reader.GetOrdinal("RecurrenceIntervalDays")),
+                CompletionDays = HasColumn(reader, "CompletionDays") && !reader.IsDBNull(reader.GetOrdinal("CompletionDays")) ? reader.GetInt32(reader.GetOrdinal("CompletionDays")) : 5,
                 IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
                 CreatedByName = reader.IsDBNull(reader.GetOrdinal("CreatedByName")) ? null : reader.GetString(reader.GetOrdinal("CreatedByName")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
@@ -68,6 +70,7 @@ public class RecurringController : ControllerBase
         command.CommandType = CommandType.StoredProcedure;
         command.Parameters.Add(new SqlParameter("@ModuleId", request.ModuleId));
         command.Parameters.Add(new SqlParameter("@RecurrenceIntervalDays", request.RecurrenceIntervalDays));
+        command.Parameters.Add(new SqlParameter("@CompletionDays", request.CompletionDays > 0 ? request.CompletionDays : 5));
         command.Parameters.Add(new SqlParameter("@CreatedBy", GetCurrentUserId()));
 
         using var reader = await command.ExecuteReaderAsync();
@@ -101,6 +104,7 @@ public class RecurringController : ControllerBase
         command.CommandType = CommandType.StoredProcedure;
         command.Parameters.Add(new SqlParameter("@ConfigId", configId));
         command.Parameters.Add(new SqlParameter("@RecurrenceIntervalDays", request.RecurrenceIntervalDays));
+        command.Parameters.Add(new SqlParameter("@CompletionDays", request.CompletionDays > 0 ? request.CompletionDays : 5));
         command.Parameters.Add(new SqlParameter("@IsActive", request.IsActive));
 
         using var reader = await command.ExecuteReaderAsync();
@@ -150,5 +154,15 @@ public class RecurringController : ControllerBase
     {
         var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         return int.TryParse(claim, out int userId) ? userId : 0;
+    }
+
+    private static bool HasColumn(IDataRecord reader, string columnName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (reader.GetName(i).Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 }

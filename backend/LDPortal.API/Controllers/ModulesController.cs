@@ -43,6 +43,7 @@ public class ModulesController : ControllerBase
                 ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
                 Title = reader.GetString(reader.GetOrdinal("Title")),
                 Type = reader.GetString(reader.GetOrdinal("Type")),
+                Category = reader.GetOrdinal("Category") >= 0 && !reader.IsDBNull(reader.GetOrdinal("Category")) ? reader.GetString(reader.GetOrdinal("Category")) : "HR",
                 Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
                 Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
                 DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
@@ -103,6 +104,7 @@ public class ModulesController : ControllerBase
                 ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
                 Title = reader.GetString(reader.GetOrdinal("Title")),
                 Type = reader.GetString(reader.GetOrdinal("Type")),
+                Category = reader.GetOrdinal("Category") >= 0 && !reader.IsDBNull(reader.GetOrdinal("Category")) ? reader.GetString(reader.GetOrdinal("Category")) : "HR",
                 Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
                 Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
                 DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
@@ -161,6 +163,7 @@ public class ModulesController : ControllerBase
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@Title", request.Title));
             command.Parameters.Add(new SqlParameter("@Type", request.Type));
+            command.Parameters.Add(new SqlParameter("@Category", string.IsNullOrEmpty(request.Category) ? "HR" : request.Category));
             command.Parameters.Add(new SqlParameter("@Description", (object?)request.Description ?? DBNull.Value));
             command.Parameters.Add(new SqlParameter("@Duration", (object?)request.Duration ?? DBNull.Value));
             command.Parameters.Add(new SqlParameter("@DurationSeconds", (object?)request.DurationSeconds ?? DBNull.Value));
@@ -202,6 +205,7 @@ public class ModulesController : ControllerBase
                 ModuleId = moduleId,
                 Title = request.Title,
                 Type = request.Type,
+                Category = string.IsNullOrEmpty(request.Category) ? "HR" : request.Category,
                 Description = request.Description,
                 Duration = request.Duration,
                 DurationSeconds = request.DurationSeconds,
@@ -250,6 +254,7 @@ public class ModulesController : ControllerBase
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@ModuleId", id));
             command.Parameters.Add(new SqlParameter("@Title", request.Title));
+            command.Parameters.Add(new SqlParameter("@Category", string.IsNullOrEmpty(request.Category) ? "HR" : request.Category));
             command.Parameters.Add(new SqlParameter("@Description", (object?)request.Description ?? DBNull.Value));
             command.Parameters.Add(new SqlParameter("@Duration", (object?)request.Duration ?? DBNull.Value));
             command.Parameters.Add(new SqlParameter("@DurationSeconds", (object?)request.DurationSeconds ?? DBNull.Value));

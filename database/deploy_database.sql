@@ -1,15 +1,3 @@
--- ============================================================================
--- L&D TRAINING PORTAL — DATABASE DEPLOYMENT SCRIPT
--- Target: Microsoft SQL Server 2014+ (Compatibility Level 120)
--- Version: 2.0.0
--- Date: 2026-09-14
--- ============================================================================
--- INSTRUCTIONS:
---   1. Connect to your SQL Server instance via SSMS
---   2. Run this entire script in a single execution
---   3. It will create a database 'LDTrainingPortal' if it doesn't exist
---   4. All objects use IF EXISTS checks for idempotent re-runs
--- ============================================================================
 
 USE [master]
 GO
@@ -1190,7 +1178,7 @@ GO
 -- ── Seed Users ─────────────────────────────────────────────────────────────
 -- Password for all users: Training@123
 -- BCrypt hash of 'Training@123' (cost factor 11)
-DECLARE @PasswordHash NVARCHAR(500) = '$2a$11$rZLk5V5j5z5z5z5z5z5z5O5z5z5z5z5z5z5z5z5z5z5z5z5z5z5z'
+DECLARE @PasswordHash NVARCHAR(500) = '$2a$11$EXJZw2zeftWNVDz5Oh3qouPLu/n.jZaGBhEqskHuXcoJLYhsf7Bhe'
 
 -- Only insert if no users exist
 IF NOT EXISTS (SELECT 1 FROM dbo.Users)
