@@ -61,6 +61,7 @@ public class AssignmentsController : ControllerBase
                 ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
                 ModuleTitle = reader.GetString(reader.GetOrdinal("ModuleTitle")),
                 ModuleType = reader.GetString(reader.GetOrdinal("ModuleType")),
+                Category = HasColumn(reader, "Category") && !reader.IsDBNull(reader.GetOrdinal("Category")) ? reader.GetString(reader.GetOrdinal("Category")) : "HR",
                 ModuleDescription = reader.IsDBNull(reader.GetOrdinal("ModuleDescription")) ? null : reader.GetString(reader.GetOrdinal("ModuleDescription")),
                 Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
                 DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds")),
@@ -77,6 +78,7 @@ public class AssignmentsController : ControllerBase
                 ConsentedAt = reader.IsDBNull(reader.GetOrdinal("ConsentedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("ConsentedAt")),
                 IsRecurring = reader.GetBoolean(reader.GetOrdinal("IsRecurring")),
                 RecurrenceIntervalDays = reader.IsDBNull(reader.GetOrdinal("RecurrenceIntervalDays")) ? null : reader.GetInt32(reader.GetOrdinal("RecurrenceIntervalDays")),
+                CompletionDays = HasColumn(reader, "CompletionDays") && !reader.IsDBNull(reader.GetOrdinal("CompletionDays")) ? reader.GetInt32(reader.GetOrdinal("CompletionDays")) : 5,
                 ProgressId = reader.IsDBNull(reader.GetOrdinal("ProgressId")) ? 0 : reader.GetInt32(reader.GetOrdinal("ProgressId"))
             };
             progressDict[dto.ModuleId] = dto;
@@ -188,6 +190,7 @@ public class AssignmentsController : ControllerBase
                     ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
                     Title = reader.GetString(reader.GetOrdinal("Title")),
                     Type = reader.GetString(reader.GetOrdinal("Type")),
+                    Category = HasColumn(reader, "Category") && !reader.IsDBNull(reader.GetOrdinal("Category")) ? reader.GetString(reader.GetOrdinal("Category")) : "HR",
                     Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
                     Duration = reader.IsDBNull(reader.GetOrdinal("Duration")) ? null : reader.GetString(reader.GetOrdinal("Duration")),
                     IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive"))
@@ -235,6 +238,12 @@ public class AssignmentsController : ControllerBase
         using var connection = _context.Database.GetDbConnection();
         await connection.OpenAsync();
 
+        var dueDate = request.DueDate;
+        if (dueDate == null && request.CompletionDays.HasValue && request.CompletionDays.Value > 0)
+        {
+            dueDate = DateTime.UtcNow.Date.AddDays(request.CompletionDays.Value);
+        }
+
         foreach (var userId in request.UserIds)
         {
             foreach (var moduleId in request.ModuleIds)
@@ -245,8 +254,11 @@ public class AssignmentsController : ControllerBase
                 command.Parameters.Add(new SqlParameter("@UserId", userId));
                 command.Parameters.Add(new SqlParameter("@ModuleId", moduleId));
                 command.Parameters.Add(new SqlParameter("@IsRequired", request.IsRequired));
-                command.Parameters.Add(new SqlParameter("@DueDate", (object?)request.DueDate ?? DBNull.Value));
+                command.Parameters.Add(new SqlParameter("@DueDate", (object?)dueDate ?? DBNull.Value));
                 command.Parameters.Add(new SqlParameter("@AssignedBy", adminId));
+                command.Parameters.Add(new SqlParameter("@IsRecurring", request.IsRecurring));
+                command.Parameters.Add(new SqlParameter("@RecurrenceIntervalDays", (object?)request.RecurrenceIntervalDays ?? DBNull.Value));
+                command.Parameters.Add(new SqlParameter("@CompletionDays", (object?)request.CompletionDays ?? 5));
 
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -293,5 +305,15 @@ public class AssignmentsController : ControllerBase
     {
         var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         return int.TryParse(claim, out int userId) ? userId : 0;
+    }
+
+    private static bool HasColumn(IDataRecord reader, string columnName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (reader.GetName(i).Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 }

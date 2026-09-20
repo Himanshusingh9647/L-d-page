@@ -48,6 +48,7 @@ public class ModuleDto
     public int ModuleId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
+    public string Category { get; set; } = "HR"; // "IT" or "HR"
     public string? Description { get; set; }
     public string? Duration { get; set; }
     public int? DurationSeconds { get; set; }
@@ -75,6 +76,9 @@ public class CreateModuleRequest
     [Required]
     public string Type { get; set; } = "Video";
 
+    [MaxLength(50)]
+    public string Category { get; set; } = "HR";
+
     public string? Description { get; set; }
     public string? Duration { get; set; }
     public int? DurationSeconds { get; set; }
@@ -88,6 +92,9 @@ public class UpdateModuleRequest
 {
     [Required, MaxLength(300)]
     public string Title { get; set; } = string.Empty;
+
+    [MaxLength(50)]
+    public string Category { get; set; } = "HR";
 
     public string? Description { get; set; }
     public string? Duration { get; set; }
@@ -109,10 +116,12 @@ public class AssignmentDto
     public int ModuleId { get; set; }
     public string ModuleTitle { get; set; } = string.Empty;
     public string ModuleType { get; set; } = string.Empty;
+    public string Category { get; set; } = "HR";
     public bool IsRequired { get; set; }
     public DateTime? DueDate { get; set; }
     public bool IsRecurring { get; set; }
     public int? RecurrenceIntervalDays { get; set; }
+    public int? CompletionDays { get; set; } = 5;
     public DateTime AssignedAt { get; set; }
 }
 
@@ -127,6 +136,12 @@ public class CreateAssignmentRequest
     public bool IsRequired { get; set; } = true;
 
     public DateTime? DueDate { get; set; }
+
+    public bool IsRecurring { get; set; } = false;
+
+    public int? RecurrenceIntervalDays { get; set; }
+
+    public int? CompletionDays { get; set; } = 5;
 }
 
 public class RemoveAssignmentRequest
@@ -146,6 +161,7 @@ public class ProgressDto
     public int ModuleId { get; set; }
     public string ModuleTitle { get; set; } = string.Empty;
     public string ModuleType { get; set; } = string.Empty;
+    public string Category { get; set; } = "HR";
     public string? ModuleDescription { get; set; }
     public string? Duration { get; set; }
     public int? DurationSeconds { get; set; }
@@ -162,6 +178,7 @@ public class ProgressDto
     public DateTime? ConsentedAt { get; set; }
     public bool IsRecurring { get; set; }
     public int? RecurrenceIntervalDays { get; set; }
+    public int? CompletionDays { get; set; } = 5;
     public List<int> CompletedItemIds { get; set; } = new();
     public List<ItemProgressDto> ItemProgresses { get; set; } = new();
     public List<ModuleItemDto> Items { get; set; } = new();
@@ -276,7 +293,9 @@ public class RecurringConfigDto
     public int ModuleId { get; set; }
     public string ModuleTitle { get; set; } = string.Empty;
     public string ModuleType { get; set; } = string.Empty;
+    public string Category { get; set; } = "HR";
     public int RecurrenceIntervalDays { get; set; }
+    public int CompletionDays { get; set; } = 5;
     public bool IsActive { get; set; }
     public string? CreatedByName { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -289,12 +308,18 @@ public class CreateRecurringConfigRequest
 
     [Required, Range(1, 3650)]
     public int RecurrenceIntervalDays { get; set; } = 90;
+
+    [Range(1, 365)]
+    public int CompletionDays { get; set; } = 5;
 }
 
 public class UpdateRecurringConfigRequest
 {
     [Range(1, 3650)]
     public int RecurrenceIntervalDays { get; set; }
+
+    [Range(1, 365)]
+    public int CompletionDays { get; set; } = 5;
 
     public bool IsActive { get; set; }
 }
