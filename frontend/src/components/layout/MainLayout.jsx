@@ -1,3 +1,4 @@
+import NotificationsDropdown from './NotificationsDropdown';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavigation from './TopNavigation';
@@ -30,17 +31,10 @@ export default function MainLayout({ requiredRole }) {
 
   if (loading) {
     return (
-<<<<<<< HEAD
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="text-text-secondary font-medium">Loading L&D Portal...</span>
-=======
       <div className="h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#0b0f19]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           <span className="text-slate-500 dark:text-slate-400 font-medium text-sm">Loading SEMCO L&D Portal...</span>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
         </div>
       </div>
     );
@@ -55,13 +49,6 @@ export default function MainLayout({ requiredRole }) {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="flex h-screen bg-background overflow-hidden text-text">
-      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <TopNavigation />
-=======
     <div className="flex h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 overflow-hidden transition-colors duration-200">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
@@ -87,7 +74,6 @@ export default function MainLayout({ requiredRole }) {
             <NotificationsDropdown />
           </div>
         </header>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
         
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background transition-all duration-300">
           <div className="mx-auto w-full max-w-[1440px]">

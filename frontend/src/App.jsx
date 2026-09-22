@@ -26,20 +26,11 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
 
-<<<<<<< HEAD
-            {/* Employee Routes */}
-            <Route element={<MainLayout requiredRole="Employee" />}>
-              <Route path="/" element={<EmployeeDashboard />} />
-              <Route path="/courses" element={<Courses />} />
-              <Route path="/training/:moduleId" element={<TrainingViewer />} />
-            </Route>
-=======
               {/* Employee Routes */}
               <Route element={<MainLayout requiredRole="Employee" />}>
                 <Route path="/" element={<EmployeeDashboard />} />
                 <Route path="/training/:moduleId" element={<TrainingViewer />} />
               </Route>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
 
               {/* Admin Routes */}
               <Route path="/admin" element={<MainLayout requiredRole="Admin" />}>

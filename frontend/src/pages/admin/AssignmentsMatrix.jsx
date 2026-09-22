@@ -147,34 +147,6 @@ export default function AssignmentsMatrix() {
   const filteredEmployees = getFilteredEmployees();
   const hasChanges = Object.keys(changes).length > 0;
 
-<<<<<<< HEAD
-  if (loading) return <div className="p-8 flex items-center justify-center text-text-secondary h-64">Loading Assignment Matrix...</div>;
-
-  return (
-    <div className="p-6 lg:p-8 max-w-[1440px] mx-auto space-y-8 flex flex-col min-h-[calc(100vh-64px)]">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold text-text tracking-tight">Assignment Matrix</h1>
-          <p className="text-sm text-text-secondary mt-1">Assign and manage mandatory training per department or role.</p>
-        </div>
-        
-        {hasChanges && (
-          <div className="flex gap-3 items-center animate-fade-in bg-warning/10 px-4 py-2 rounded-xl border border-warning/20 shadow-sm">
-            <span className="text-xs font-bold uppercase tracking-wider text-warning mr-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
-              Unsaved changes
-            </span>
-            <div className="flex items-center gap-2 mr-2 border-r border-warning/20 pr-4">
-              <label className="text-xs font-bold text-text-secondary uppercase tracking-widest">Due Date:</label>
-              <input 
-                type="date" 
-                value={globalDueDate}
-                onChange={(e) => setGlobalDueDate(e.target.value)}
-                className="text-sm bg-surface border border-border rounded-lg px-2 py-1 outline-none focus:border-primary focus:ring-1 focus:ring-primary text-text"
-              />
-            </div>
-            <button onClick={discardChanges} className="text-text-secondary hover:text-text font-semibold text-sm px-3 py-1.5 rounded-lg hover:bg-surface-hover transition-colors">
-=======
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center text-slate-400 h-64">
@@ -216,35 +188,19 @@ export default function AssignmentsMatrix() {
               onClick={discardChanges} 
               className="text-slate-500 dark:text-slate-400 hover:text-slate-700 font-semibold text-xs px-2.5 py-1.5 rounded-lg hover:bg-white/50 transition-colors"
             >
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
               Discard
             </button>
             <Button 
               onClick={handleSave} 
               disabled={saving}
-<<<<<<< HEAD
-              size="sm"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin mr-2 inline" /> : <Save size={16} className="mr-2 inline" />}
-=======
               className="btn-primary py-2 px-4 text-xs font-bold shadow-md hover:shadow-lg cursor-pointer"
             >
               {saving ? <Loader2 size={15} className="animate-spin mr-1.5" /> : <Save size={15} className="mr-1.5" />}
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
               Save Assignments
             </Button>
           </div>
         )}
       </div>
-<<<<<<< HEAD
-      <Card className="flex-1 flex flex-col min-h-0 relative z-10">
-        <div className="overflow-auto flex-1">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr>
-                <th className="p-4 bg-surface-hover backdrop-blur-md border-b border-border border-r min-w-[220px] sticky left-0 z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)]">
-                  <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Employee</span>
-=======
 
       {/* Configuration & Filter Bar */}
       <div className="card p-5 mb-6 border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#111827] space-y-4 shadow-sm">
@@ -393,7 +349,6 @@ export default function AssignmentsMatrix() {
                       Clear
                     </button>
                   </div>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 </th>
                 {data.modules.map(module => (
                   <th key={module.moduleId} className="p-4 bg-surface-hover backdrop-blur-md border-b border-border min-w-[160px] text-center">
@@ -403,14 +358,6 @@ export default function AssignmentsMatrix() {
                 ))}
             </tr>
           </thead>
-<<<<<<< HEAD
-          <tbody className="divide-y divide-border">
-            {data.employees.map(employee => (
-              <tr key={employee.userId} className="hover:bg-slate-50 transition-colors group">
-                <td className="p-4 border-r border-border sticky left-0 bg-surface z-10 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.02)] group-hover:bg-slate-50 transition-colors">
-                  <div className="font-semibold text-text text-sm">{employee.fullName}</div>
-                  <div className="text-xs font-medium text-text-secondary mt-0.5">{employee.department}</div>
-=======
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredEmployees.map(employee => (
               <tr key={employee.userId} className="table-row-hover hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors group">
@@ -428,7 +375,6 @@ export default function AssignmentsMatrix() {
                       </div>
                     </div>
                   </div>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 </td>
 
                 {filteredModules.map(module => {
@@ -437,33 +383,6 @@ export default function AssignmentsMatrix() {
                   const isModified = changes[`${employee.userId}-${module.moduleId}`] !== undefined;
 
                   return (
-<<<<<<< HEAD
-                    <td key={module.moduleId} className="p-4 text-center">
-                      <button
-                        onClick={() => toggleAssignment(employee.userId, module.moduleId)}
-                        className={`inline-flex flex-col items-center justify-center p-3 rounded-xl transition-all w-24 h-20 outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                          isChanged ? 'bg-primary-light border border-primary/20 shadow-inner' : 'hover:bg-surface-hover hover:shadow-sm border border-transparent'
-                        }`}
-                        title={assigned ? 'Click to unassign' : 'Click to assign'}
-                      >
-                        {assigned ? (
-                          <div className={`flex items-center justify-center w-6 h-6 rounded ${isChanged ? 'bg-primary text-white shadow-md' : 'bg-slate-800 text-white shadow-sm'}`}>
-                            <CheckSquare size={14} strokeWidth={3} />
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center w-6 h-6 rounded border-2 border-border text-transparent">
-                            <Square size={14} />
-                          </div>
-                        )}
-                        
-                        {assigned && status && (
-                          <Badge 
-                            variant={status === 'Completed' ? 'success' : status === 'InProgress' ? 'warning' : 'secondary'} 
-                            className="mt-2 text-[9px] px-1.5 py-0.5"
-                          >
-                            {status}
-                          </Badge>
-=======
                     <td 
                       key={module.moduleId}
                       onClick={() => toggleAssignment(employee.userId, module.moduleId)}
@@ -490,7 +409,6 @@ export default function AssignmentsMatrix() {
                           }`}>
                             {status || 'Pending'}
                           </span>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                         )}
                       </div>
                     </td>

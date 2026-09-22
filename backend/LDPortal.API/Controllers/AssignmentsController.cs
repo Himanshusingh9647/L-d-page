@@ -41,22 +41,23 @@ public class AssignmentsController : ControllerBase
 
     private async Task<IActionResult> GetUserAssignmentsInternal(int userId)
     {
-        var resultList = new List<ProgressDto>
+        using var connection = _context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        using var command = connection.CreateCommand();
+        command.CommandText = "dbo.sp_GetMyAssignments";
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add(new SqlParameter("@UserId", userId));
+
+        using var reader = await command.ExecuteReaderAsync();
+        var progressDict = new Dictionary<int, ProgressDto>();
+        var itemsByModule = new Dictionary<int, List<ModuleItemDto>>();
+        var itemProgressByProgressId = new Dictionary<int, List<ItemProgressDto>>();
+
+        // Result 1: Assignments with progress
+        while (await reader.ReadAsync())
         {
-            new ProgressDto
+            var dto = new ProgressDto
             {
-<<<<<<< HEAD
-                ModuleId = 1,
-                ModuleTitle = "Company Code of Conduct",
-                ModuleType = "Video",
-                ModuleDescription = "Annual required compliance training regarding workplace ethics and conduct.",
-                Duration = "15 mins",
-                IsRequired = true,
-                DueDate = DateTime.UtcNow.AddDays(-2), // Overdue
-                Status = "NotStarted"
-            },
-            new ProgressDto
-=======
                 ModuleId = reader.GetInt32(reader.GetOrdinal("ModuleId")),
                 ModuleTitle = reader.GetString(reader.GetOrdinal("ModuleTitle")),
                 ModuleType = reader.GetString(reader.GetOrdinal("ModuleType")),
@@ -87,42 +88,62 @@ public class AssignmentsController : ControllerBase
         if (await reader.NextResultAsync())
         {
             while (await reader.ReadAsync())
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
             {
-                ModuleId = 2,
-                ModuleTitle = "Information Security Basics",
-                ModuleType = "Video",
-                ModuleDescription = "Learn how to protect company assets and avoid phishing attacks.",
-                Duration = "20 mins",
-                IsRequired = true,
-                DueDate = DateTime.UtcNow.AddDays(3), // Due soon
-                Status = "InProgress",
-                VideoWatchedPercent = 45m
-            },
-            new ProgressDto
-            {
-                ModuleId = 3,
-                ModuleTitle = "Leadership Principles",
-                ModuleType = "Document",
-                ModuleDescription = "Core leadership values for prospective managers.",
-                Duration = "30 mins",
-                IsRequired = false,
-                DueDate = DateTime.UtcNow.AddDays(14), // Up next
-                Status = "NotStarted"
-            },
-            new ProgressDto
-            {
-                ModuleId = 4,
-                ModuleTitle = "Workplace Safety",
-                ModuleType = "Video",
-                ModuleDescription = "General office safety guidelines.",
-                Duration = "10 mins",
-                IsRequired = true,
-                DueDate = DateTime.UtcNow.AddDays(-10), 
-                Status = "Completed",
-                CompletedAt = DateTime.UtcNow.AddDays(-1)
+                var moduleId = reader.GetInt32(reader.GetOrdinal("ModuleId"));
+                if (!itemsByModule.TryGetValue(moduleId, out var items))
+                {
+                    items = new List<ModuleItemDto>();
+                    itemsByModule[moduleId] = items;
+                }
+                items.Add(new ModuleItemDto
+                {
+                    ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
+                    Title = reader.GetString(reader.GetOrdinal("Title")),
+                    ContentUrl = reader.GetString(reader.GetOrdinal("ContentUrl")),
+                    OrderIndex = reader.GetInt32(reader.GetOrdinal("OrderIndex")),
+                    DurationSeconds = reader.IsDBNull(reader.GetOrdinal("DurationSeconds")) ? null : reader.GetInt32(reader.GetOrdinal("DurationSeconds"))
+                });
             }
-        };
+        }
+
+        // Result 3: Item Progress
+        if (await reader.NextResultAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                var progressId = reader.GetInt32(reader.GetOrdinal("ProgressId"));
+                if (!itemProgressByProgressId.TryGetValue(progressId, out var ips))
+                {
+                    ips = new List<ItemProgressDto>();
+                    itemProgressByProgressId[progressId] = ips;
+                }
+                ips.Add(new ItemProgressDto
+                {
+                    ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
+                    ResumeTimeSeconds = reader.GetInt32(reader.GetOrdinal("ResumeTimeSeconds")),
+                    MaxWatchedSeconds = reader.GetInt32(reader.GetOrdinal("MaxWatchedSeconds")),
+                    IsCompleted = reader.GetBoolean(reader.GetOrdinal("IsCompleted"))
+                });
+            }
+        }
+
+        // Combine
+        foreach (var p in progressDict.Values)
+        {
+            if (itemsByModule.TryGetValue(p.ModuleId, out var items))
+                p.Items = items;
+            if (p.ProgressId > 0 && itemProgressByProgressId.TryGetValue(p.ProgressId, out var ips))
+            {
+                p.ItemProgresses = ips;
+                p.CompletedItemIds = ips.Where(ip => ip.IsCompleted).Select(ip => ip.ItemId).ToList();
+            }
+        }
+
+        var resultList = progressDict.Values
+            .OrderBy(dto => dto.Status != "Completed" ? 0 : 1)
+            .ThenBy(dto => dto.DueDate)
+            .ThenBy(dto => dto.ModuleTitle)
+            .ToList();
 
         return Ok(ApiResponse<List<ProgressDto>>.Ok(resultList));
     }

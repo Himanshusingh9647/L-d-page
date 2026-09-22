@@ -1,14 +1,9 @@
+import { Button } from '../../components/ui/Button';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-<<<<<<< HEAD
-import { GraduationCap, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
-import { Card, CardContent } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-=======
 import { useTheme } from '../../context/ThemeContext';
 import { ShieldCheck, Mail, Lock, Loader2, ArrowRight, Sun, Moon } from 'lucide-react';
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -37,28 +32,6 @@ export default function Login() {
   };
 
   return (
-<<<<<<< HEAD
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden font-sans">
-      {/* Premium Minimal Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-light rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary-light rounded-full blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
-      
-      <div className="w-full max-w-[420px] p-6 relative z-10">
-        <Card variant="featured">
-          <CardContent className="p-10">
-            <div className="relative">
-            <div className="flex flex-col items-center mb-10">
-              <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-primary/20">
-                <GraduationCap size={28} className="text-white" strokeWidth={2.5} />
-              </div>
-              <h1 className="text-2xl font-black text-text tracking-tight">L&D Portal</h1>
-              <p className="text-sm text-text-secondary mt-1.5 font-semibold tracking-wide uppercase">Training Management</p>
-            </div>
-
-            {error && (
-              <div className="mb-6 p-4 bg-danger/10 border border-danger/20 text-danger text-sm font-medium rounded-xl flex items-center gap-3 animate-fade-in">
-                <div className="w-1.5 h-1.5 bg-danger rounded-full shrink-0"></div>
-=======
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50/50 to-slate-200 dark:from-[#060913] dark:via-[#0c1322] dark:to-[#070d18] relative overflow-hidden font-sans transition-colors duration-300">
       {/* Background glow elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-500/10 dark:bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
@@ -96,19 +69,10 @@ export default function Login() {
             {error && (
               <div className="mb-5 p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-300 text-xs font-semibold rounded-xl flex items-center gap-2.5 animate-fade-in">
                 <div className="w-1.5 h-1.5 bg-rose-500 rounded-full shrink-0"></div>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 {error}
               </div>
             )}
 
-<<<<<<< HEAD
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-text-secondary uppercase tracking-widest ml-1">Email address</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-text-secondary/50 group-focus-within:text-primary transition-colors" />
-=======
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider ml-1">
@@ -117,31 +81,19 @@ export default function Login() {
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 w-11 flex items-center justify-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-blue-500 transition-colors">
                     <Mail className="h-4 w-4" />
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   </div>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-<<<<<<< HEAD
-                    className="w-full pl-11 pr-4 py-3.5 bg-background border border-border rounded-xl text-text focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-text-secondary/50 font-medium text-sm"
-=======
                     className="input-field text-xs py-3 w-full"
                     style={{ paddingLeft: '2.85rem' }}
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                     placeholder="name@company.com"
                   />
                 </div>
               </div>
 
-<<<<<<< HEAD
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-text-secondary uppercase tracking-widest ml-1">Password</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-text-secondary/50 group-focus-within:text-primary transition-colors" />
-=======
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider ml-1">
                   Password
@@ -149,19 +101,14 @@ export default function Login() {
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 w-11 flex items-center justify-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-blue-500 transition-colors">
                     <Lock className="h-4 w-4" />
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   </div>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-<<<<<<< HEAD
-                    className="w-full pl-11 pr-4 py-3.5 bg-background border border-border rounded-xl text-text focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-text-secondary/50 font-medium text-sm"
-=======
                     className="input-field text-xs py-3 w-full"
                     style={{ paddingLeft: '2.85rem' }}
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                     placeholder="••••••••"
                   />
                 </div>
@@ -170,12 +117,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={isLoading}
-<<<<<<< HEAD
-                className="w-full mt-4"
-                size="lg"
-=======
                 className="w-full btn-primary py-3 rounded-xl text-xs font-bold mt-2 shadow-md hover:shadow-lg cursor-pointer"
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
               >
                 {isLoading ? (
                   <Loader2 className="animate-spin h-4 w-4" />
@@ -187,19 +129,6 @@ export default function Login() {
                 )}
               </Button>
             </form>
-<<<<<<< HEAD
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className="mt-8 text-center bg-background/50 backdrop-blur-sm p-4 rounded-2xl border border-border">
-          <p className="text-xs text-text-secondary font-medium leading-relaxed">
-            <span className="font-bold text-text uppercase tracking-widest block mb-2">Demo Credentials</span>
-            Admin: arjun.kapoor@company.com<br />
-            Employee: priya.sharma@company.com<br />
-            <span className="text-text-secondary mt-1 block">Password: Training@123</span>
-          </p>
-=======
 
             {/* Quick Demo Fill Buttons */}
             <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -230,7 +159,6 @@ export default function Login() {
               </span>
             </div>
           </div>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
         </div>
       </div>
     </div>

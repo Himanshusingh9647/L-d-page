@@ -1,14 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-<<<<<<< HEAD
-import { Plus, Play, FileText, Loader2, RefreshCw, Trash2, Edit2, UploadCloud } from "lucide-react";
-=======
 import { 
   Plus, Play, FileText, Loader2, RefreshCw, Trash2, Edit2, 
   UploadCloud, CheckCircle, FolderOpen, Copy, Eye, Search, 
   Filter, Shield, Building2, Sparkles, BookOpen, AlertCircle,
   Clock, RotateCw
 } from "lucide-react";
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
 import { modulesApi, mediaApi } from "../../api/apiClient";
 import { useToast } from "../../context/ToastContext";
 import { Card, CardContent } from "../../components/ui/Card";
@@ -280,41 +276,6 @@ export default function AdminModules() {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="p-6 lg:p-8 max-w-[1440px] mx-auto space-y-8 flex flex-col min-h-[calc(100vh-64px)]">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold text-text tracking-tight">Module Management</h1>
-          <p className="text-sm text-text-secondary mt-1">Manage training modules and video assets.</p>
-        </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4 mr-2" />
-          <span>New Module</span>
-        </Button>
-      </div>
-
-      <Card className="flex-1 flex flex-col min-h-0">
-        <div className="overflow-auto flex-1">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-surface-hover border-b border-border">
-                <th className="p-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Title</th>
-                <th className="p-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Type</th>
-                <th className="p-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Duration</th>
-                <th className="p-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">Items</th>
-                <th className="p-4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {modules.map((module) => (
-                <tr key={module.moduleId} className="hover:bg-surface-hover transition-colors">
-                  <td className="p-4">
-                    <p className="text-sm font-semibold text-text">{module.title}</p>
-                    <p className="text-xs text-text-secondary mt-0.5 truncate max-w-xs">{module.description}</p>
-                  </td>
-                  <td className="p-4">
-                    <Badge variant={module.type === 'Video' ? 'primary' : 'warning'}>
-=======
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -413,18 +374,10 @@ export default function AdminModules() {
                     <span className={`badge ${
                       module.type === 'Video' ? 'badge-info' : 'badge-warning'
                     }`}>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                       {module.type === 'Video' ? <Play className="h-3 w-3 mr-1.5" /> : <FileText className="h-3 w-3 mr-1.5" />}
                       {module.type}
-                    </Badge>
+                    </span>
                   </td>
-<<<<<<< HEAD
-                  <td className="p-4 text-sm font-medium text-text-secondary">
-                    {module.duration} mins
-                  </td>
-                  <td className="p-4 text-sm font-medium text-text-secondary">
-                    {module.items?.length || 0} part(s)
-=======
                   <td className="p-4 text-sm font-medium text-slate-600 dark:text-slate-300">
                     {module.duration || 10} mins
                   </td>
@@ -434,16 +387,11 @@ export default function AdminModules() {
                       : module.contentUrl?.startsWith('/documents/') 
                         ? <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1"><CheckCircle size={13}/> Shared Path</span>
                         : module.policyContent ? 'Text Content' : 'Uploaded PDF'}
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   </td>
                   <td className="p-4 text-right">
                     <button 
                       onClick={() => openEditModal(module)}
-<<<<<<< HEAD
-                      className="p-2 text-text-secondary hover:text-primary rounded-lg hover:bg-primary-light transition-colors inline-flex"
-=======
                       className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors inline-flex cursor-pointer"
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                       title="Edit Module"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -453,110 +401,18 @@ export default function AdminModules() {
               ))}
               {filteredModules.length === 0 && (
                 <tr>
-<<<<<<< HEAD
-                  <td colSpan="5" className="p-8 text-center text-text-secondary text-sm">
-                    No modules found. Create one to get started.
-=======
                   <td colSpan="6" className="p-12 text-center text-slate-400 dark:text-slate-500 text-sm">
                     No modules found matching your filters.
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
 
       {/* Module Create/Edit Modal */}
       {isModalOpen && (
-<<<<<<< HEAD
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col border-0">
-            <div className="p-6 border-b border-border shrink-0 bg-surface">
-              <h2 className="text-xl font-bold text-text tracking-tight">
-                {editingModuleId ? "Edit Module" : "Create New Module"}
-              </h2>
-              <p className="text-sm text-text-secondary mt-1">
-                Configure module details and upload or select media files.
-              </p>
-            </div>
-            
-            <form onSubmit={handleSubmitModule} className="flex flex-col overflow-hidden h-full">
-              <div className="p-6 space-y-6 bg-background overflow-y-auto">
-                
-                {/* File Upload Section */}
-                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm">
-                  <h3 className="text-sm font-bold text-text mb-3 tracking-tight">Upload Media</h3>
-                  
-                  <label 
-                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors cursor-pointer ${uploading ? 'bg-surface-hover border-border' : 'border-border hover:border-primary hover:bg-primary-light/50'}`}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleFileDrop}
-                  >
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      ref={fileInputRef}
-                      accept=".mp4,.webm,.pdf" 
-                      onChange={handleFileDrop}
-                      disabled={uploading}
-                    />
-                    
-                    {uploading ? (
-                      <div className="w-full max-w-xs">
-                        <div className="flex justify-between text-xs mb-1 font-medium text-text-secondary">
-                          <span>Uploading...</span>
-                          <span>{uploadProgress}%</span>
-                        </div>
-                        <div className="w-full bg-surface-hover rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${uploadProgress}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center text-primary mb-3 shadow-sm">
-                          <UploadCloud className="h-6 w-6" />
-                        </div>
-                        <p className="text-sm font-medium text-text">Click to upload or drag and drop</p>
-                        <p className="text-xs text-text-secondary mt-1">MP4, WEBM, PDF up to 500MB</p>
-                      </>
-                    )}
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-text mb-1.5">Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={newModule.title}
-                      onChange={e => setNewModule({...newModule, title: e.target.value})}
-                      className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                      placeholder="E.g., Security Training"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-text mb-1.5">Type</label>
-                    <select
-                      value={newModule.type}
-                      onChange={e => setNewModule({...newModule, type: e.target.value})}
-                      className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-50"
-                      disabled={!!editingModuleId}
-                    >
-                      <option value="Video">Video Course</option>
-                      <option value="PDF">Document</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-text mb-1.5">Description</label>
-=======
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="card w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827]">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-[#111827] flex items-center justify-between">
@@ -594,20 +450,10 @@ export default function AdminModules() {
 
                 <div className="form-group mb-0">
                   <label className="form-label">Description</label>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   <textarea
                     required
                     value={newModule.description}
                     onChange={e => setNewModule({...newModule, description: e.target.value})}
-<<<<<<< HEAD
-                    className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none h-20"
-                    placeholder="Brief description..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-text mb-1.5">Total Duration (mins)</label>
-=======
                     className="input-field resize-none h-16 text-sm"
                     placeholder="Brief description of this training module..."
                   />
@@ -659,84 +505,21 @@ export default function AdminModules() {
                     <Clock size={14} className="text-blue-600" />
                     Completion Window (Days)
                   </label>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   <input
                     type="number"
                     min="1"
                     max="365"
                     required
-<<<<<<< HEAD
-                    value={newModule.duration}
-                    onChange={e => setNewModule({...newModule, duration: e.target.value})}
-                    className="w-1/2 px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-=======
                     value={newModule.completionWindowDays}
                     onChange={e => setNewModule({...newModule, completionWindowDays: e.target.value})}
                     className="input-field text-sm"
                     placeholder="e.g. 5"
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
                     Days an employee has to complete this after assignment.
                   </p>
                 </div>
 
-<<<<<<< HEAD
-                <div className="pt-5 border-t border-border">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-bold text-text tracking-tight">Playlist Items</h3>
-                    <button type="button" onClick={refreshMedia} className="text-xs text-primary hover:text-indigo-700 flex items-center font-medium bg-primary-light px-2 py-1 rounded-md">
-                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh list
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {newModule.items.map((item, index) => (
-                      <div key={index} className="flex items-start gap-3 bg-surface p-4 rounded-xl border border-border shadow-sm">
-                        <div className="flex-1 grid gap-3">
-                          <input
-                            type="text"
-                            required
-                            value={item.title}
-                            onChange={e => handleItemChange(index, 'title', e.target.value)}
-                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                            placeholder={`Part ${index + 1} Title`}
-                          />
-                          <select
-                            required
-                            value={item.contentUrl}
-                            onChange={e => handleItemChange(index, 'contentUrl', e.target.value)}
-                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                          >
-                            <option value="">-- Select uploaded file --</option>
-                            {availableMedia
-                              .filter(f => newModule.type === 'Video' ? f.toLowerCase().match(/\.(mp4|webm)$/) : f.toLowerCase().endsWith('.pdf'))
-                              .map(file => (
-                              <option key={file} value={file}>{file}</option>
-                            ))}
-                          </select>
-                        </div>
-                        {newModule.items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(index)}
-                            className="text-text-secondary hover:text-danger hover:bg-danger/10 p-2 rounded-lg transition-colors mt-0.5"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleAddItem}
-                    className="mt-4 text-sm text-primary font-semibold flex items-center py-2 px-3 rounded-lg hover:bg-primary-light transition-colors"
-                  >
-                    <Plus className="h-4 w-4 mr-1.5" /> Add Part
-                  </button>
-=======
                 {/* Recurring Toggle */}
                 <div className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
                   <div className="flex items-center justify-between">
@@ -785,21 +568,10 @@ export default function AdminModules() {
                       </p>
                     </div>
                   )}
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 </div>
 
                 {/* ── 3-WAY DOCUMENT UPLOAD SYSTEM (When Type is PDF) ── */}
                 {newModule.type === 'PDF' && (
-<<<<<<< HEAD
-                  <div className="pt-5 border-t border-border">
-                    <label className="block text-sm font-semibold text-text mb-1.5">Consent Text</label>
-                    <textarea
-                      value={newModule.policyContent}
-                      onChange={e => setNewModule({...newModule, policyContent: e.target.value})}
-                      className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none h-20"
-                      placeholder="I have read and agree..."
-                    />
-=======
                   <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm space-y-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
                       <div>
@@ -989,7 +761,6 @@ export default function AdminModules() {
                         )}
                       </div>
                     )}
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   </div>
                 )}
 
@@ -1061,36 +832,26 @@ export default function AdminModules() {
 
               </div>
 
-<<<<<<< HEAD
-              <div className="p-5 border-t border-border shrink-0 flex space-x-3 bg-surface">
-                <Button
-=======
               <div className="p-5 border-t border-slate-100 dark:border-slate-800 shrink-0 flex space-x-3 bg-white dark:bg-[#111827]">
                 <button
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   variant="secondary"
                   className="flex-1"
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
-<<<<<<< HEAD
-                  disabled={submitting || newModule.items.length === 0 || uploading}
-                  className="flex-1"
-=======
                   disabled={submitting || uploading}
                   className="btn-primary flex-1"
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 >
                   {submitting ? <Loader2 className="h-5 w-5 animate-spin mr-2 inline" /> : null}
                   {editingModuleId ? "Save Changes" : "Create Module"}
-                </Button>
+                </button>
               </div>
             </form>
-          </Card>
+          </div>
         </div>
       )}
     </div>

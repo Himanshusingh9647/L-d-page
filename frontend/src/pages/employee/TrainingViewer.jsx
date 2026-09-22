@@ -1,14 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { modulesApi, progressApi, assignmentsApi } from '../../api/apiClient';
-<<<<<<< HEAD
-import { ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, ListVideo, PlayCircle, Lock } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { ProgressBar } from '../../components/ui/ProgressBar';
-=======
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { modulesApi, progressApi, assignmentsApi } from '../../api/apiClient';
 import { ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, ListVideo, PlayCircle, Lock, SquareCheckBig } from 'lucide-react';
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
 
 export default function TrainingViewer() {
   const { moduleId } = useParams();
@@ -326,18 +323,6 @@ export default function TrainingViewer() {
               )}
             </div>
           ) : (
-<<<<<<< HEAD
-            // PDF Viewer (Scroll tracking implemented)
-            <div className="flex flex-col h-full bg-background w-full relative">
-              <div 
-                ref={scrollContainerRef}
-                onScroll={handleScroll}
-                className="flex-1 p-8 overflow-y-auto scroll-smooth"
-              >
-                <div className="max-w-3xl mx-auto prose prose-slate bg-surface p-12 rounded-2xl shadow-sm border border-border whitespace-pre-wrap min-h-[150vh]">
-                  <h2 className="text-2xl font-bold text-text mb-6 pb-4 border-b border-border/50">Policy Document</h2>
-                  <div className="text-text">{module.policyContent || "No content provided."}</div>
-=======
             // Document Viewer (Supports Option 1 & 2 PDF iframe AND Option 3 Rich Document)
             <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 w-full relative">
               {module.contentUrl ? (
@@ -368,7 +353,6 @@ export default function TrainingViewer() {
                       title={module.title} 
                     />
                   </div>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 </div>
               ) : (
                 // Option 3: Rich Document / Paste Viewer
@@ -406,31 +390,6 @@ export default function TrainingViewer() {
                 </div>
               )}
               
-<<<<<<< HEAD
-              <div className="absolute bottom-0 inset-x-0 p-6 bg-surface/90 backdrop-blur-xl border-t border-border flex flex-col items-center justify-center shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)]">
-                {consentError && <p className="text-danger text-sm mb-3 font-medium flex items-center gap-1.5"><AlertCircle size={14}/>{consentError}</p>}
-                
-                {!pdfConsented ? (
-                  <>
-                    <p className="text-xs font-medium text-text-secondary mb-4 text-center max-w-xl uppercase tracking-wider">
-                      {hasScrolledToBottom ? "You may now consent to this policy." : "Please scroll to the bottom of the document to consent."}
-                    </p>
-                    <Button 
-                      onClick={handlePdfConsent}
-                      disabled={!hasScrolledToBottom}
-                      size="lg"
-                      className="px-8 flex items-center gap-2"
-                    >
-                      {hasScrolledToBottom ? <ShieldCheck size={20} /> : <Lock size={18} />}
-                      I Have Read & Consent
-                    </Button>
-                  </>
-                ) : (
-                  <Badge variant="success" className="px-6 py-3 rounded-xl flex items-center justify-center font-semibold gap-2 shadow-sm text-sm">
-                    <CheckCircle2 size={20} className="text-success" />
-                    Consent Recorded
-                  </Badge>
-=======
               <div className="absolute bottom-0 inset-x-0 p-5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] z-20">
                 {consentError && <p className="text-rose-500 text-sm mb-2 font-medium flex items-center gap-1.5"><AlertCircle size={14}/>{consentError}</p>}
                 
@@ -478,7 +437,6 @@ export default function TrainingViewer() {
                     <CheckCircle2 size={18} className="text-emerald-500" />
                     Completed — Undertaking Acknowledged & Recorded in Portal
                   </div>
->>>>>>> c82bfbef095a0618f2e81bd94d2b320ca44209ad
                 )}
               </div>
             </div>
