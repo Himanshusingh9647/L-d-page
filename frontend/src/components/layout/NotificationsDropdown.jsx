@@ -3,7 +3,6 @@ import { Bell, Check, Circle, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { notificationsApi } from '../../api/apiClient';
 
-// API client handles Auth token and baseURL
 export default function NotificationsDropdown({ collapsed }) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -21,9 +20,9 @@ export default function NotificationsDropdown({ collapsed }) {
       }
 
       const res = await notificationsApi.getAll();
-      
-      setNotifications(res.data);
-      setUnreadCount(res.data.filter(n => !n.isRead).length);
+      const list = res.data || [];
+      setNotifications(list);
+      setUnreadCount(list.filter(n => !n.isRead).length);
     } catch (err) {
       console.error('Failed to fetch notifications', err);
     } finally {
@@ -33,12 +32,10 @@ export default function NotificationsDropdown({ collapsed }) {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll every 1 minute
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -53,7 +50,6 @@ export default function NotificationsDropdown({ collapsed }) {
     e.stopPropagation();
     try {
       await notificationsApi.markAsRead(id);
-      
       setNotifications(prev => prev.map(n => 
         n.notificationId === id ? { ...n, isRead: true } : n
       ));
@@ -68,7 +64,6 @@ export default function NotificationsDropdown({ collapsed }) {
       await handleMarkRead(notif.notificationId, { stopPropagation: () => {} });
     }
     setIsOpen(false);
-    // Navigate to Training if it's assignment or deadline
     if (notif.type === 'Assignment' || notif.type === 'Deadline') {
       navigate('/');
     }
@@ -78,68 +73,70 @@ export default function NotificationsDropdown({ collapsed }) {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-center p-3 rounded-xl transition-all relative ${isOpen ? 'bg-[#1a1c23]' : 'hover:bg-[#1a1c23]'}`}
+        className={`flex items-center justify-center p-2 rounded-xl transition-all relative cursor-pointer ${
+          isOpen ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
         title="Notifications"
       >
-        <Bell size={22} className={`transition-colors ${isOpen || unreadCount > 0 ? 'text-indigo-400' : 'text-slate-400'}`} />
+        <Bell size={20} className={`transition-colors ${isOpen || unreadCount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
         {unreadCount > 0 && (
-          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-black" />
+          <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-white dark:border-slate-900" />
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-80 bg-[#14151a] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[100]">
-          <div className="p-4 border-b border-slate-800/50 flex items-center justify-between bg-black/20">
-            <h3 className="font-bold text-slate-200">Notifications</h3>
+        <div className="absolute top-full right-0 mt-2 w-84 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-fade-in">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/40">
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">Notifications</h3>
             {unreadCount > 0 && (
-              <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-900">
                 {unreadCount} unread
               </span>
             )}
           </div>
           
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
             {loading ? (
               <div className="flex justify-center p-8">
-                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-sm">
-                No notifications yet.
+              <div className="p-8 text-center text-slate-400 text-xs">
+                No notifications right now.
               </div>
             ) : (
-              <div className="flex flex-col">
-                {notifications.map(notif => (
-                  <div 
-                    key={notif.notificationId}
-                    onClick={() => handleNotificationClick(notif)}
-                    className={`p-4 border-b border-slate-800/30 cursor-pointer transition-colors hover:bg-slate-800/50 flex gap-3 ${!notif.isRead ? 'bg-indigo-500/5' : ''}`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <span className={`text-sm font-semibold truncate ${!notif.isRead ? 'text-indigo-400' : 'text-slate-300'}`}>
-                          {notif.title}
-                        </span>
-                        {!notif.isRead && (
-                          <button 
-                            onClick={(e) => handleMarkRead(notif.notificationId, e)}
-                            className="text-slate-500 hover:text-indigo-400 shrink-0"
-                            title="Mark as read"
-                          >
-                            <Check size={16} />
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
-                        {notif.message}
-                      </p>
-                      <span className="text-[10px] text-slate-600 font-medium mt-2 block">
-                        {new Date(notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              notifications.map(notif => (
+                <div 
+                  key={notif.notificationId}
+                  onClick={() => handleNotificationClick(notif)}
+                  className={`p-3.5 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 flex gap-3 ${
+                    !notif.isRead ? 'bg-blue-50/40 dark:bg-blue-950/30' : ''
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <span className={`text-xs font-bold truncate ${!notif.isRead ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                        {notif.title}
                       </span>
+                      {!notif.isRead && (
+                        <button 
+                          onClick={(e) => handleMarkRead(notif.notificationId, e)}
+                          className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 shrink-0"
+                          title="Mark as read"
+                        >
+                          <Check size={14} />
+                        </button>
+                      )}
                     </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                      {notif.message}
+                    </p>
+                    <span className="text-[10px] text-slate-400 font-medium mt-1.5 block">
+                      {new Date(notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
         </div>

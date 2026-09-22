@@ -25,6 +25,8 @@ public class TrainingAssignment
 
     public int? RecurrenceIntervalDays { get; set; }
 
+    public int? CompletionDays { get; set; } = 5;
+
     public bool IsActive { get; set; } = true;
 
     // Navigation

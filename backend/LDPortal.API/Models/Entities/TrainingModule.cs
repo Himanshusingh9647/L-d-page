@@ -15,6 +15,9 @@ public class TrainingModule
     [Required, MaxLength(20)]
     public string Type { get; set; } = "Video"; // Video or PDF
 
+    [MaxLength(50)]
+    public string Category { get; set; } = "HR"; // "IT" or "HR"
+
     public string? Description { get; set; }
 
     [MaxLength(50)]

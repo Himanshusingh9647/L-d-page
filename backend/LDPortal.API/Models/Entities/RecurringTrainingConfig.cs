@@ -13,6 +13,8 @@ public class RecurringTrainingConfig
 
     public int RecurrenceIntervalDays { get; set; } = 90;
 
+    public int CompletionDays { get; set; } = 5;
+
     public bool IsActive { get; set; } = true;
 
     public int? CreatedBy { get; set; }
